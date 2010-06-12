@@ -1,0 +1,207 @@
+Git & Github的使用入门:
+
+1. 初次运行git前的配置:
+   配置用户信息, 用户名称和电子邮件地址, 这两条配置很重要, 每次Git提交时都会引用这两条信息,
+   说明是谁提交了更新, 所以会随更新内容一起被永久纳入历史记录.
+   git config --global user.name "erlangonrails"
+   git config --global user.email erlangonrails@gmail.com
+   (注意: 我们使用--global修改的是~/.gitconfig这个文件)
+
+   查看配置信息:
+   git config --list
+
+2. 获取项目的Git仓库
+   <1> 从当前目录初始化
+       我们创建一个新的目录作为项目目录, 进入这个目录, 然后初始化
+       (初始化之后当前目录会出现一个.git的隐藏目录)
+       mkdir gittest
+       cd gittest
+       git init
+
+   <2> 将一个文件纳入版本控制
+       git add README
+       git commit -m 'this is the comments of the checkin'
+
+   <3> 从现有的仓库克隆
+       格式: git clone [url]
+       这里是clone而不是checkout, 这是个非常重要的差别, Git收取的是项目历史的所有
+       数据(每一个文件的每一个版本), 服务器上有的数据克隆之后本地也都有了. 实际上, 即便服
+       务器的磁盘发生故障, 用任何一个克隆出来的客户端都可以重建服务器上的仓库, 回到当初克隆
+       时的状态.
+
+       例如:
+       git clone git://github.com/erlangonrails/devdb.git devdbclone
+       该命令会在当前目录下创建一个devdbclone的子目录, 并把devdb这个项目clone下来.
+
+3. 记录每次更新到仓库:
+   <1> 工作目录下的所有文件只有两种状态: 未跟踪(untracked)和已跟踪(tracked)状态.
+       tracked只已经纳入版本控制中的文件, 它可能包括三种状态
+       a. unmodified 未修改
+       b. modified 已修改
+       c. staged 放入暂存区
+       untracked没有被纳入版本控制的文件
+
+   <2> 检查文件的当前状态, 理解几种状态之间的转换.
+       git status
+
+       例如:
+       git status
+       # On branch master
+       nothing to commit (working directory clean)
+       这说明你现在的工作目录相当干净
+
+       我们创建一个新的文件后再次查看, 可以看到Untracked files的信息, 说明有untracked的文件.
+       touch README
+       git status
+       # On branch master
+       # Untracked files:
+       #   (use "git add <file>..." to include in what will be committed)
+       #
+       #	README
+       nothing added to commit but untracked files present (use "git add" to track)
+
+       添加一个文件后, 再次查看状态, 看到Changes to be committed, 说明文件处于stage状态.
+       git add README
+       git status
+       # On branch master
+       # Changes to be committed:
+       #   (use "git reset HEAD <file>..." to unstage)
+       #
+       #	new file:   README
+
+       提交更新
+       git commit -m 'another checkin'
+       [master a2f04bc] another checkin
+       0 files changed, 0 insertions(+), 0 deletions(-)
+       create mode 100644 README
+
+       修改README文件之后, 再次查看其状态
+       git status
+       # On branch master
+       # Changed but not updated:
+       #   (use "git add <file>..." to update what will be committed)
+       #   (use "git checkout -- <file>..." to discard changes in working directory)
+       #
+       #	modified:   README
+       #
+       no changes added to commit (use "git add" and/or "git commit -a")
+
+       这个时候我们直接git commit是不会提交README文件的修改的, 需要执行先add, 然后在commit
+       git add README
+       git status
+       # On branch master
+       # Changes to be committed:
+       #   (use "git reset HEAD <file>..." to unstage)
+       #
+       #	modified:   README
+       #
+       git commit -m 'checkin in new version'
+       [master 76bf2e2] checkin in new version
+       1 files changed, 2 insertions(+), 0 deletions(-)
+
+      
+   <3> 跳过使用暂存区stage, 我们在commit的时候加上-a参数, 这时候就不需要对已经跟踪的文件add,
+       可以直接commit.
+       git commit -a -m 'checkin in new version'
+
+   <4> 移除文件
+       git rm README
+       rm 'README'
+       git status
+       # On branch master
+       # Changes to be committed:
+       #   (use "git reset HEAD <file>..." to unstage)
+       #
+       #	deleted:    README
+       #
+       git commit -a -m 'delete README'
+       [master 5785cd5] delete README
+       1 files changed, 0 insertions(+), 2 deletions(-)
+       delete mode 100644 README
+
+       补充:
+       如果删除之前修改过并且已经放到暂存区域的话, 则必须要用强制删除选项 -f.
+
+   <5> 移动文件
+       git mv README README.new
+       git status
+       # On branch master
+       # Changes to be committed:
+       #   (use "git reset HEAD <file>..." to unstage)
+       #
+       #	renamed:    README -> README.new
+       #
+       git commit -a -m 'rename checkin'
+       [master fd7e784] rename checkin
+       1 files changed, 0 insertions(+), 0 deletions(-)
+       rename README => README.new (100%)
+
+       实质上, git mv相当于下面三个命令:
+       mv README README.new
+       git rm README
+       git add README.new
+
+   <6> 查看提交的日志
+       git log 
+   
+   <7> 取消已暂存的文件: git reset HEAD <file> ...
+       git add test.c
+       git status
+       # On branch master
+       # Changes to be committed:
+       #   (use "git reset HEAD <file>..." to unstage)
+       #
+       #	new file:   test.c
+       #
+       git reset HEAD test.c
+       git status
+       # On branch master
+       # Untracked files:
+       #   (use "git add <file>..." to include in what will be committed)
+       #
+       #	test.c
+
+   <8> 取消对文件的修改
+       git status
+       # On branch master
+       # Changed but not updated:
+       #   (use "git add <file>..." to update what will be committed)
+       #   (use "git checkout -- <file>..." to discard changes in working directory)
+       #
+       #	modified:   test.c
+       #
+       no changes added to commit (use "git add" and/or "git commit -a")
+       git checkout -- test.c
+       git status
+       # On branch master
+       nothing to commit (working directory clean)
+
+3. 远程仓库的使用:
+   <1> 查看当前的远程仓库
+       git remote
+       在克隆完某个项目后, 至少可以看到一个名为origin的远程库, Git默认使用这个名字来标识你所克隆
+       的原始仓库.
+
+   <2> 添加远程仓库
+       git remote add [shortname] [url]
+
+       例如:
+       git remote add origin git@github.com:woomsgdev/youbao.git
+
+   <3> 从远程仓库抓取数据
+       git fetch [remote-shortname]
+
+       例如:
+       git fetch origin
+
+   <4> 推送数据到远程仓库
+       git push [remote-shortname] [branch]
+      
+       例如:
+       git push origin master
+
+
+
+
+
+
