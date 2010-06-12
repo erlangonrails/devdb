@@ -1,0 +1,208 @@
+1. 如何使用redis?
+Note: 所有的命令都是使用redis-cli完成的
+<1> 数据的存储和获取SET/GET
+SET server:name value => OK
+GET server:name => "value"
+
+<2> 使用DEL删除数据
+SET server:name value => OK
+GET server:name => "value"
+DEL server:name => (integer) 1  删除数据(返回删除的数量为1)
+GET server:name => (nil)
+DEL server:name => (integer) 0  删除数据(返回删除的数量为0)
+
+<3> INCR自增数据, SETNX
+SET connections 10 => OK
+INCR connections => (integer) 11
+INCR connections => (integer) 12
+DEL connections => (integer) 1
+INCR connections => (integer) 1
+GET connections => "1"
+
+(SET-if-not-exists (called SETNX on Redis) that sets a key only if it 
+does not already exist)
+
+为什么要提供INCR这个操作? 我们可以使用如下命令模拟INCR
+x = GET connections
+x = x + 1
+SET connections x
+存在的问题:
+上面的命令在一个client的使用没有问题, 在同时有多个客户端的时候会出现问题,
+因为上述命令并不是原子操作(atomic operation), 但是INCR是原子操作, 可以解决
+多个client同时操作的问题.
+
+<4> 过期处理: EXPIRE, TTL
+SET server:name value => OK
+TTL server:name => (integer) -1  测试某个key的过期时间, -1表示永远不会过期
+                                 (注意: 对某个不存在的key也会返回-1)
+EXPIRE server:name 120 => (integer) 1 设置某个key的过期时间, 单位是second
+TTL server:name => (integer) 114 测试某个key的过期时间, 还有114秒过期
+
+注意:
+如果我们重新SET了一个key, 它之前的TTL会重新设置.
+
+<5> 对list的操作:
+list是一些列有顺序的数据的集合, 一些重要的命令来操作list
+RPUSH, LPUSH, LLEN, LRANGE, LPOP, RPOP.
+一个list也是用一个key来表示
+(注意: 这个key不能是其它类型的数据, 否则会报错)
+RPUSH mylist val5 => (integer) 1  在list的结尾插入数据
+RPUSH mylist val6 => (integer) 2
+LPUSH mylist val4 => (integer) 3  在list的开头插入数据
+LRANGE mylist 0 -1 =>             返回list的一个子集, list的第一个元素的index是0
+                                  -1表示返回整个list
+                      1. "val4"
+                      2. "val5"
+                      3. "val6"
+LRANGE mylist 1 2 =>              返回list的一个子集, 索引从1 - 2.
+                     1. "val5"
+                     2. "val6"
+LLEN mylist => (integer) 3 获取list的长度
+LPOP mylist => "val4" 从list的开头弹出一个元素
+LRANGE mylist 
+LRANGE mylist 0 -1 =>         返回当前list的所有元素
+                      1. "val5"
+                      2. "val6"
+RPOP mylist => "val6" 从list的结尾弹出一个元素
+LRANGE mylist 0 -1 =>          返回当前list的所有元素
+                      1. "val5"
+
+<6> 对set的操作:
+set和list类似, 唯一的区别是list的元素是有顺序的, set的元素没有顺序的概念,
+并且set中的每一个元素只能出现一次, 一些操作set的命令:
+SADD, SREM, SISMEMBER, SMEMBERS, SUNION
+SADD myset val1 => (integer) 1 插入数据到set中
+SADD myset val2 => (integer) 1
+SADD myset val3 => (integer) 1
+SMEMBERS myset =>           返回这个set的所有数据
+                  1. "val1"
+                  2. "val2"
+                  3. "val3"
+SISMEMBER myset val1 => (integer) 1 测试某个元素是否在这个set中, 1表示存在, 0表示不存在
+SISMEMBER myset val4 => (integer) 0
+SREM myset val3 => (integer) 1 从set中删除一个元素
+SMEMBERS myset =>          返回set中的所有元素 
+                 1. "val1"
+                 2. "val2"
+SADD mysetnew val1 => (integer) 1 构造一个新的set.
+SADD mysetnew val4 => (integer) 1
+SUNION myset mysetnew =>         组合一个或者多个set, 返回所有元素的结果集.
+                        1. "val4"
+                        2. "val1"
+                        3. "val2"
+
+<7> 对zset的操作
+zset和set类似, 是排序的set. 在set的基础上增加了一个顺序的属性.
+操作zset的主要命令有:
+ZADD, ZREM, ZRANGE
+ZADD myzset 2 liqiang => (integer) 1 插入一个元素到zset(第一个元素是排序属性)
+ZADD myzset 1 huangwei => (integer) 1
+ZADD myzset 3 user => (integer) 1
+ZRANGE myzset 0 -1 =>               返回zset的所有元素
+                      1. "huangwei"
+                      2. "liqiang"
+                      3. "user"
+ZREM myzset liqiang => (integer) 1 删除一个元素
+ZRANGE myzset 0 -1 =>               返回zset的所有元素
+                      1. "huangwei"
+                      2. "user"
+
+2. 对redis数据结构的总结:
+<1> redis不是一个纯粹的K/V系统, 实质上是一个data structures server,
+    支持不同类型的数据存储, 目前直至4种类型的数据
+    a. binary-safe strings
+    b. lists of binary-safe strings
+    c. sets of binary-safe strings (set中的元素不能重复)
+    d. sorted set (和set类似, 每一个元素多了一个floating number score, 根据这个score对元素进行排序).
+
+<2> redis key
+    a. key不是binary-safe的string, 不能包含空格或者换行符:
+    例如:
+    "foo", "foo_bar", "1234567"都是正确的key
+    "hello world", "hello\n"不是正确的key
+    b. 对使用key的一些建议:
+    >不要使用太长的key, 如果key的长度是1024个bytes, 不仅浪费内存空间, 在查询的时候也要进行多次key比较.
+    >不要使用太短的key, 例如:"u:1000:pwd"和"user:1000:password"对比, 后者可读性更好,并且增加的空间也不多.
+    >自己构建schema的规则, 例如: "object-type:id:field" -> "user:1000:name", 如果有multi-words field, 
+     建议使用.来分隔, "comment:1234:reply.to"
+
+<3> the string type
+    a. 我们可以使用SET/GET命令来存储和获取string, string可以是任意的二进制数据, 例如我们可以存储
+       jpeg图片, 但要注意的是一个value的最大值不能大于1GB.
+    b. string则"原子增"操作和"原子减"操作: INCR, INCRBY, DECR, DECRBY
+       我们可以对string类型的数据做增加和减少操作, 并且保持操作的原子性.
+       SET counter 100 => OK
+       INCR counter => (integer) 101
+       INCR counter => (integer) 102
+       INCRBY counter 10 => (integer) 112
+       DECR counter => (integer) 111
+       DECRBY counter 100 => (integer) 11
+       DECRBY counter 100 => (integer) -89
+    c. GETSET操作:
+       这个操作的行为是设置一个key为一个新的value, 并返回老的value.
+       这个操作的应用场景?
+       在一个网站做访问统计的地方, 使用INCR来记录每一次网站的访问, 定期的, 比如每隔一个小时,
+       调用一次GETSET visit_count 0, 获取之前的统计数据后清0重新开始统计.
+       GETSET counter 10 => (nil) 在counter不存在的使用调用GETSET
+       GETSET counter 100 => "10" 
+
+<4> the list type
+    a. list简单说就是一些数据按照一定顺序组成的集合.
+    b. list的插入操作LPUSH, RPUSH都是常数时间的, 也就是即使list有几百万个元素, 在开头或者结尾
+       插入数据的时间和只有一个元素的list是一样的.
+    c. redis的缺点是什么?
+       redis的list是linked list, 同array list比较, 给予index的访问要慢一些.
+    d. redis list的应用场景 - chat system, 按顺序的存储聊天记录.
+       RPUSH messages "hello, how are you?" => (integer) 1
+       RPUSH messages "fine, thanks, I'm having fun with redis" => (integer) 2
+       RPUSH messages "i should look int this NOSQL things ASAP" => (integer) 3
+       LRANGE messages 0 -1 => 
+       1. "hello, how are you?"
+       2. "fine, thanks, I'm having fun with redis"
+       3. "i should look int this NOSQL things ASAP"
+       
+       我们也可以用redis list在不同的进程间路由消息, 总结下来一句话,
+       "我们可以在希望按照'添加的数据项的顺序'来访问数据的时候, redis list是一个合理的选择",
+       这不需要SQL ORDER BY操作, 并且非常高速, 并且在数据量包含几百万个元素的时候同样高速.
+       我们可以用redis list来存储blog, 或者存储每一篇blog的评论信息等等.
+    e. 一种更合理的使用redis list的方式: 在一个list中存储IDs而不是实际的数据
+       由于一个objects可能在一个系统中被多次引用, 可以使用如下类似的解决方案.
+       例如, 我们要新增一篇blog, 可以做如下的操作:
+       INCR next.blogs.id => (integer) 1  %% 获取当前blog的ID.
+       SET blogs:1:title "this is blog-title1" => OK
+       SET blogs:1:url "http://www.myblog.com/blog1" => OK
+       LPUSH submmited.blogs 1 => (integer) 1  %% 把新增的blog加入到所有blog的索引集合中.
+
+<5> the set type
+    a. set内的元素是唯一的, 不能重复.
+    b. 可以方便的使用set来表达objects之间的关系, 例如使用set实现一个tags的例子:
+    我们要对一篇id为1000的blog增加3个标签: 1,2,5
+    SADD blogs:1000:tags 1 => (integer) 1 
+    SADD blogs:1000:tags 2 => (integer) 1
+    SADD blogs:1000:tags 5 => (integer) 1
+    SADD tag:1:blogs 1000 => (integer) 1
+    SADD tag:2:blogs 1000 => (integer) 1
+    SADD tag:5:blogs 1000 => (integer) 1
+    SMEMBERS blogs:1000:tags => 获取blog 1000的所有tag
+    1. "5"
+    2. "1"
+    3. "2"
+    SMEMBERS tag:1:blogs => 获取tag 1的所有blog
+    1. "1000"
+
+<6> 如何get unique identifiers for strings, 如何为一个元素设置一个唯一的标示符?
+    例如, 我们有一个标签redis, 我们希望有如下的功能: GET redis, 如果这个标签已经存在,
+    返回它对应的ID, 如果不存在, 为它设置一个新的ID.
+    错误的方式(在多个客户端的时候会出问题):
+    GET tag:redis:id => (nil)
+    INCR next.tag.id => (integer) 1001
+    SET tag:redis:id 1001 => OK
+
+    正确的方式:
+    GET tag:redis:id => (nil)
+    INCR next.tag.id => (integer) 1001
+    SETNX tag:redis:id 1001 => (integer) 1
+
+<7> sorted sets
+    是排序的set.
+
