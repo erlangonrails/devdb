@@ -1,0 +1,2 @@
+在编译之前手动创建一个ebin文件夹来存放*.beam文件.
+mkdir mysql/ebin
