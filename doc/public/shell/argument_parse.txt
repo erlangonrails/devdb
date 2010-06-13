@@ -1,0 +1,27 @@
+linux 脚本常见的参数解析方式:
+#! /bin/sh
+
+ARGS=
+while [ $# -ne 0 ]; do
+  PARAM=$1
+  shift;
+  case $PARAM in
+    --) break ;;
+    --node) NODE_ARG=$1; shift ;;
+    --config) CONFIG_ARG=$1; shift ;;
+    --log) LOG_ARG=$1; shift ;;
+    *) ARGS="$ARGS $PARAM" ;;   // 注意: *仍然是通配符
+  esac
+done
+
+echo "\$ARGS: $ARGS"
+echo "\$NODE_ARG: $NODE_ARG"
+echo "\$CONFIG_ARG: $CONFIG_ARG"
+echo "\$LOG_ARG: $LOG_ARG"
+
+测试:
+./checkargs.sh otherarg2 --node node1 --config my.cfg --log my.log otherarg1 
+$ARGS:  otherarg2 otherarg1
+$NODE_ARG: node1
+$CONFIG_ARG: my.cfg
+$LOG_ARG: my.log

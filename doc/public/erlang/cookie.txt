@@ -1,0 +1,6 @@
+Erlang中使用magic cookie的三种方式:
+<1> 把相同的cookie放在$HOME/.erlang.cookie文件中, 这个文件包含了一个随机的字符串, 这个字符串是我们第一次
+    在该机器上运行erlang的时候自动生成的.
+    如果要在另外的机器上连接到分布式的erlang网络中, 应该copy这个文件到本地.
+<2> 启动erlang节点的时候, 使用erl -setcookie xxxxxx的方式设置cookie.
+<3> 节点启动后, 使用erlang:set_coolie(node(), xxxxxx)的方式设置magic cookie.
