@@ -1,0 +1,32 @@
+$translate.erl
+
+分析ejabberd多语言支持的原理:
+
+1. ejabberd提供了对多语言的支持, 所有的语言包存储在msgs目录下, 以*.msg结尾,
+   例如: 中文的语言包是zh.msg, 日文是ja.msg等等.
+
+   语言包的数据存储格式如下(存储的都是erlang term), Key/Value形式的数据
+   Key = 英文数据      EnKeyData
+   Val = 翻译后的数据   TranslatedData
+
+   例如: zh.msg
+   {"Access Configuration","访问配置"}.
+   {"Access Control List Configuration","访问控制列表(ACL)配置"}.
+   {"Access control lists","访问控制列表(ACL)"}.
+   {"Access Control Lists","访问控制列表(ACL)"}.
+   ....
+
+2. 内部使用transactions的ets表来存储msg信息, 是一个Key/Value形式的表, 在调用
+   translate:start()后, 会把所有的*.msg的内容写入到这个ets表.
+
+   Key = {Lang:string(), EnKeyData}
+   Val = TranslatedData
+
+3. 使用方式:
+   translate:translate(Lang, Msg) -> TranslatedMsg
+   其中Lang是语言包的前缀, 例如zh.msg的Lang="zh", jp.msg的Lang="jp".
+
+   1) 在翻译的时候, 如果是transactions表中已经存在的数据, 返回翻译后的结果
+      translate:translate("zh", "Access Configuration") -> "访问配置"
+   2) 如果是transactions表中没有存在的数据, 返回Msg
+      translate:translate("zh", "Access Configuration another") -> "Access Configuration another"
