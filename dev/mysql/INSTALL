@@ -1,0 +1,8 @@
+To compile this module, run:
+
+./build.sh
+
+Then copy the beam files from the directory ebin/ to the ejabberd ebin
+directory (or where the ejabberd beam files are). Probably are one of:
+  /lib/ejabberd/ebin/
+  /var/lib/ejabberd/ebin/
