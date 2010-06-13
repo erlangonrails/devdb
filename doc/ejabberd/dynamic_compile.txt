@@ -1,0 +1,22 @@
+$dynamic_compile.erl
+
+分析动态编译模块的机制:
+
+1. dynamic_compile动态编译模块
+   <1> 该模块提供了动态编译Erlang Module的能力, 可以在程序运行中"动态的编译, 生成一个新的模块".
+
+   <2> 使用方式(返回的Binary可以供code:load_binary/3使用):
+
+       例如:
+       CodeStr = "-module(dynamicmod)" ++
+                 "-export([test/0])" ++
+                 "test() ->" ++
+                 "    io:format(\"this is dynamicmod demo~n\", []).",
+       {Module:atom(), Binary} = dynamic_compile:from_string(CodeStr),
+       code:load_binary(Module, [], Binary), %% 动态生成Module模块
+       dynamicmod:test(). %% 调用动态生成的module
+
+   <3> 典型应用:
+       在ejabberd的ejabberd_loglevel模块使用了这种技术, 当我们每次调用
+       ejabberd_loglevel:set(Level)重新设置一个loglevel的时候, 都会根据新设置的
+       level动态的"重新生成一个ejabberd_logger模块"
