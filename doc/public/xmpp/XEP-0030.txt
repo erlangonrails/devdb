@@ -1,0 +1,67 @@
+XEP-0030: 服务发现 - Service Discovery
+
+1. 协议功能:
+在Jabber网络中发现实体相关信息的能力
+<1> 获得对象实体的身份identity, 一个实体的身份被分成种类(category)
+    (服务器、客户端、网关、目录等等).
+
+<2> 目标实体提供的特性和支持的协议, 注册、搜索、联合等等.
+
+2. 客户端查询服务器的服务信息
+请求实体必须向目标实体的JID发送类型为get的IQ请求, 并且包含一个命名空间是
+http://jabber.org/protocol/disco#info的<query/>子元素; to属性是
+必须的, 必须包含有效的JID.
+<1> C -> S 客户端对服务器发出服务发现请求
+<iq type='get'
+    from='romeo@montague.net/orchard'
+    to='plays.shakespeare.lit'
+    id='info1'>
+  <query xmlns='http://jabber.org/protocol/disco#info'/>
+</iq>
+
+<2> S -> C 返回结果
+每个<identity/>必须拥有category和type属性, 用来说明实体的种类.
+每个<feature/>必须拥有一个var属性, 它是协议的命名空间或是实体提供的其他特性
+<iq type='result'
+    from='plays.shakespeare.lit'
+    to='romeo@montague.net/orchard'
+    id='info1'>
+  <query xmlns='http://jabber.org/protocol/disco#info'>
+    <identity
+        category='conference'
+        type='text'
+        name='Play-Specific Chatrooms'/>
+    <identity
+        category='directory'
+        type='chatroom'
+        name='Play-Specific Chatrooms'/>
+    <feature var='http://jabber.org/protocol/disco#info'/>
+    <feature var='http://jabber.org/protocol/disco#items'/>
+    <feature var='http://jabber.org/protocol/muc'/>
+    <feature var='jabber:iq:register'/>
+    <feature var='jabber:iq:search'/>
+    <feature var='jabber:iq:time'/>
+    <feature var='jabber:iq:version'/>
+  </query>
+</iq>
+
+3. 服务器查询一个客户端的信息
+S1 - shakespeare.lit
+S2 - capulet.com
+<1> S1-> S2 服务器S1请求一个JID的信息
+<iq type='get'
+    from='shakespeare.lit'
+    to='juliet@capulet.com'
+    id='info2'>
+  <query xmlns='http://jabber.org/protocol/disco#info'/>
+</iq>
+
+<2> S2-> S1 服务器S2代替JID发送结果
+<iq type='result'
+    from='juliet@capulet.com'
+    to='shakespeare.lit'
+    id='info2'>
+  <query xmlns='http://jabber.org/protocol/disco#info'>
+    <identity category='account' type='registered'/>
+  </query>
+</iq>

@@ -1,0 +1,287 @@
+介绍XMPP协议关于出席信息定于和Roster部分的内容
+
+文档主要包含三部分内容:
+a. 请求订阅
+b. 名册管理
+c. 名册和订阅的集成
+
+
+1. 请求订阅
+a. 如何请求一个订阅
+b. 如何处理一个订阅请求, "同意"或者"拒绝"
+c. 如何取消一个曾经允许的定于
+d. 如何取消对一个实体的订阅
+
+请求订阅的开始是通过发送一个类型为subscribe的presence-stanza开始的.
+C1 = user1@localhost
+C2 = user2@localhost
+步骤<1> - <2>为一个请求, 答复的过程.
+<1> C1 -> S 请求一个订阅
+<presence to='user2@localhost' type='subscribe'/>
+
+<2> C2 -> S 处理一个订阅
+<presence to='user1@localhost' type='subscribed'/>    - 同意
+<presence to='user1@localhsot' type='unsubscribed'/>  - 拒绝 
+
+<3> C2 -> S  取消一个曾经允许的订阅请求
+发送类型为unsubscribed的presence-stanza.
+<presence to='user1@localhost' type='unsubscribed'/>
+
+<4> C1 -> S 取消对令一个实体的订阅
+发送类型为unsubscribe的presence-stanza
+<presence to='juliet@example.com' type='unsubscribe'/>
+
+2. 名册管理
+<1> <item>中最重要的两个属性是jid和subscription, jid的格式是<user@domain>,
+是每个item的id. subscription决定了用户和联系人之间的订阅关系.
+
+<2> 名册中<item/>的subscription属性
+none - 两个人之间没有订阅关系
+to   - 用户订阅了这个联系人的出席消息, 但是联系人没有订阅用户的出席消息
+from - 用户没有订阅这个联系人的出席消息, 但是联系人订阅了用户的出席消息
+both - 用户和联系人都订阅了双反的出席消息
+
+步骤<3> - <4> 为一个请求, 答复的过程.
+<3> C -> S 登录的时候接收名册
+<iq from='juliet@example.com/balcony' type='get' id='roster_1'>
+    <query xmlns='jabber:iq:roster'/>
+</iq>
+
+<4> S -> C 服务器返回用户的名册
+<iq to='juliet@example.com/balcony' type='result' id='roster_1'>
+    <query xmlns='jabber:iq:roster'>
+       <item jid='romeo@example.net'
+             name='Romeo'
+             subscription='both'>
+         <group>Friends</group>
+       </item>
+       <item jid='mercutio@example.org'
+             name='Mercutio'
+             subscription='from'>
+         <group>Friends</group>
+       </item>
+       <item jid='benvolio@example.org'
+             name='Benvolio'
+             subscription='both'>
+         <group>Friends</group>
+       </item>
+    </query>
+</iq>
+
+步骤<5> - <7> 为一个请求, 答复的过程.
+<5> C -> S 用户增加一个名册条目(不能包含subscription属性)
+<iq from='juliet@example.com/balcony' type='set' id='roster_2'>
+    <query xmlns='jabber:iq:roster'>
+       <item jid='nurse@example.com'
+             name='Nurse'>
+         <group>Servants</group>
+       </item>
+    </query>
+</iq>
+
+<6> S -> C 服务器返回结果(必须包含两部分)
+a. 服务器向用户的"所有可用资源" - "推送名册的改变" (如果用户有多条可用资源, 我们应该向所有的资源发送这个改变) (item包含subscription属性 = 'none')
+b. 答复用户iq-stanza的结果
+<iq to='juliet@example.com/balcony'
+       type='set'
+       id='a78b4q6ha463'>
+    <query xmlns='jabber:iq:roster'>
+       <item jid='nurse@example.com'
+             name='Nurse'
+             subscription='none'>
+         <group>Servants</group>
+       </item>
+    </query>
+</iq>
+<iq to='juliet@example.com/balcony' type='result' id='roster_2'/>
+
+<7> C -> S 客户端答复服务器的结果
+<iq from='juliet@example.com/balcony'
+       to='example.com'
+       type='result'
+       id='a78b4q6ha463'/>
+
+<8> 更新一个item和新增一个item的逻辑一样.
+
+<9> 删除一个item和新增一个item的逻辑一样.
+
+3. 名册条目和出席信息的集成
+用户向联系人订阅, C和C1分别在两台服务器上, S和S1
+C = user@example.com 用户
+C1 = contact@example.org 联系人
+S = example.com  用户的服务器
+S1 = example.org 联系人的服务器
+
+<1> C -> S 增加一个联系人到roster
+要求: 这个item必须有jid属性, 可以有name属性, 不能有subscription属性
+可以包含一个或者多个group子元素
+<iq type='set' id='set1'>
+    <query xmlns='jabber:iq:roster'>
+       <item
+           jid='contact@example.org'
+           name='MyContact'>
+         <group>MyBuddies</group>
+       </item>
+    </query>
+ </iq>
+
+<2> S -> C 用户的服务器返回结果(必须包含两部分)
+a. 服务器向用户的"所有可用资源" - "推送名册的改变" (如果用户有多条可用资源, 我们应该向所有的资源发送这个改变)(item包含subscription属性 = 'none')
+b. 答复用户iq-stanza的结果
+ <iq type='set'>
+    <query xmlns='jabber:iq:roster'>
+       <item
+           jid='contact@example.org'
+           subscription='none'
+           name='MyContact'>
+         <group>MyBuddies</group>
+       </item>
+    </query>
+ </iq>
+ <iq type='result' id='set1'/>
+
+<3> C -> S 如果用户想订阅联系人的出席消息, 发送下面请求
+<presence to='contact@example.org' type='subscribe'/>
+
+<4> S -> C 作为结果, 用户的服务器初始化第二个名册给用户所有的可用资源,
+注意这个联系人设置为'none'订阅状态的"未决子状态",由属性ask='subscribe'
+决定的.
+<iq type='set'>
+    <query xmlns='jabber:iq:roster'>
+       <item
+           jid='contact@example.org'
+           subscription='none'
+           ask='subscribe'
+           name='MyContact'>
+         <group>MyBuddies</group>
+       </item>
+    </query>
+</iq>
+
+注意: - 如果用户在发送订阅请求前没有新增一个roster, 服务器会帮助用户新建一个.
+如果用户在发送订阅请求之前没有新建一个名册条目, 服务器必须(MUST)代替用户新建一个,
+然后发送一个名册推送给这个用户的所有已经请求名册的可用资源, 不含以上所示的'name'属性
+和<group/>子元素.
+
+<5> S -> S1, S1 -> C1 服务器把这个订阅请求发送给联系人的服务器, 让联系人的服务器来发送这条
+订阅消息.
+(这个请求必须包含from和to的, 并且移除resource, 都是user@domain形式).
+联系人的服务器在接收到这个请求后, 必须决定联系人是否至少有一个可用的资源:
+a. 如果有, 则发送这个订阅请求给联系人
+b. 如果没有, 则存储这条订阅请求, 等联系人有可用资源的时候发送订阅请求给联系人.
+   联系人的服务器通过增加一个关于这个联系人的名册条目到用户名册中来实现的, 伴随着一个 
+   "None + Pending In"的状态.
+<presence
+       from='user@example.com'
+       to='contact@example.org'
+       type='subscribe'/>
+
+<6> C1 -> S1 联系人批准这个订阅请求
+a. 联系人必须发送一个roster-set增加这个用户到自己的roster中
+b. 发送一个subscribed的presence来批准用户的请求
+<iq type='set' id='set2'>
+    <query xmlns='jabber:iq:roster'>
+       <item
+           jid='user@example.com'
+           name='SomeUser'>
+         <group>SomeGroup</group>
+       </item>
+    </query>
+</iq>
+<presence to='user@example.com' type='subscribed'/>
+
+
+<7> S1 -> C1 S1 -> S (S -> C) 联系人服务器答复
+a. 联系人的服务器初始化一个名册给联系人所有的可用资源, subscription='from' S1 -> C1
+b. 联系人的服务器返回一个iq-result给联系人表示名册设置成功 S1 -> C1
+c. 联系人服务器路由联系人答复的结果给用户 S1 -> S (S -> C)
+d. 联系人服务器发送联系人的出席信息给用户 S1 -> S (S -> C)
+<iq type='set' to='contact@example.org/resource'>
+    <query xmlns='jabber:iq:roster'>
+       <item
+           jid='user@example.com'
+           subscription='from'
+           name='SomeUser'>
+         <group>SomeGroup</group>
+       </item>
+    </query>
+</iq>
+<iq type='result' to='contact@example.org/resource' id='set2'/>
+<presence
+       from='contact@example.org'
+       to='user@example.com'
+       type='subscribed'/>
+<presence
+       from='contact@example.org/resource'
+       to='user@example.com'/>
+
+<8> S -> C
+用户的服务器接收到答复结果之后, 用户的服务器必须先检查这个联系人的状态,
+a. subscription='none' and ask='subscribe' 
+b. subscription='from' and ask='subscribe'
+如果联系人不是上面两种状态, 则用户的服务器安静的忽略这个C1发送的subscribed答复. 
+如果是上面两种状态之一, 用户的服务器必须
+a. 用户服服务器代替联系人向用户递送这个"subscribed"类型的出席信息节
+b. 初始化一个名册推送给所有已请求名册的这个用户的可用资源,包含一个关于这个联系人的更新的
+   名册条目,同时其'subscription'属性值设置为"to"
+c. 从每一个联系人的可用资源向每一个用户的可用资源递送服务器接收到的可用的出席信息节
+<presence
+       to='user@example.com'
+       from='contact@example.org'
+       type='subscribed'/>
+<iq type='set'>
+    <query xmlns='jabber:iq:roster'>
+       <item
+           jid='contact@example.org'
+           subscription='to'
+           name='MyContact'>
+         <group>MyBuddies</group>
+       </item>
+    </query>
+</iq>
+<presence
+       from='contact@example.org/resource'
+       to='user@example.com/resource'/>
+
+现在从用户的角度看, 他订阅了联系人的出席消息,   subscription='to'
+从联系人的角度看, 有一个用户订阅了他的出席消息, subscriptino='from'
+双方的roster中都存在对方的信息.
+
+替代流程. 联系人拒绝订阅请求, 从步骤<6>开始
+<9> C1 -> S1 联系人拒绝订阅请求
+<presence to='user@example.com' type='unsubscribed'/>
+
+<10> S1 -> S (S -> C)
+联系人服务器路由联系人答复的结果给用户 S1 -> S (S -> C)
+(注意: 如果联系人的服务器之前把用户添加到了联系人的名册中用来跟踪, 这时它必须(MUST)移除这个相关的条目)
+<presence
+       from='contact@example.org'
+       to='user@example.com'
+       type='unsubscribed'/>
+
+<11> S -> C
+用户的服务器发送结果给用户
+a. 发送那个出席信息节给用户 
+b. 初始化一个名册推送给这个用户的所有已请求名册的可用资源, 包含一个关于这个联系人的一个更新条目,其'subscription'属性设为"none"并且没有'ask'属性.
+<presence
+       from='contact@example.org'
+       to='user@example.com'
+       type='unsubscribed'/>
+<iq type='set'>
+    <query xmlns='jabber:iq:roster'>
+       <item
+           jid='contact@example.org'
+           subscription='none'
+           name='MyContact'>
+         <group>MyBuddies</group>
+       </item>
+    </query>
+</iq>
+
+现在从用户的角度看, 联系人仍然在用户的名册中   但是subscription='none'
+从联系人的角度看, 用户根本不在他的名册中.
+
+
+
+
+

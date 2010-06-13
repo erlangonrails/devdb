@@ -1,0 +1,36 @@
+XEP-0199: XMPP Ping
+
+1. 协议功能
+<1> 侦测一个(C -> S)或者(S -> S)的XML Stream的可用性
+<2> 侦测两个XMPP实体连接的可用性.
+(C -> S, S -> C, C -> C, S -> S之间都可以发送ping请求)
+
+2. 具体协议:
+<1> 发出ping请求的实体发送一个包含<ping/>子节点的IQ-get请求,
+    <ping/>具有"urn:xmpp:ping"的命名空间
+<2> 相应ping请求的实体返回IQ-result
+
+3. S -> C Pings
+<1> S -> C 服务器对客户端发出ping请求
+<iq from='capulet.lit' to='juliet@capulet.lit/balcony' 
+    id='s2c1' 
+    type='get'>
+  <ping xmlns='urn:xmpp:ping'/>
+</iq>
+
+<2> C -> S 客户端相应服务器的ping请求
+<iq from='juliet@capulet.lit/balcony' to='capulet.lit' 
+    id='s2c1' 
+    type='result'/>
+
+4. C -> S Pings
+<1> C -> S 客户端对服务器端发送ping请求
+<iq from='juliet@capulet.lit/balcony' to='capulet.lit'
+     id='c2s1' type='get'>
+  <ping xmlns='urn:xmpp:ping'/>
+</iq>
+
+<2> S -> C 服务器相应客户端的ping请求
+<iq from='capulet.lit' to='juliet@capulet.lit/balcony' 
+    id='c2s1' 
+    type='result'/>

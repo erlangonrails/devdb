@@ -1,0 +1,144 @@
+XEP-0191: Simple Communications Blocking
+
+由于实现基于XEP-0016 Privacy Lists对隐私的处理过于复杂, 所以我们实现了这个简单的block通讯
+的协议作为补充.
+
+1. 协议概述
+<1> 三点要求(这种block是双向的)
+    a. 一个用户可以阻止于一个联系人的通讯 - block
+    b. 用户可以获取blocked contacts的列表 - get blocked lists
+    c. 用户可以解除对联系人的通讯的阻止 - unblock
+
+<2> 于Privacy List的关系 - 映射关系 - default privacy list.
+该协议并定义成XEP-0016的一个子集, blocklist会映射到default privacy list, 每一个
+blocked jid会对应privacy list中的一个action='deny'的item.
+a. 如果一个用户使用privacy list, 并且修改了default privacy list, 这种修改会反应在blocklist中.
+b. 如果一个用户删除了default privacy list, 并定义了一个新的default privacy list,则这个新的default
+   privacy list会变成当前的blocklist.
+c. 如果客户端active别的privacy list而不是default privacy list, 则用户可能会收到来自blocklist中的jid
+   的通讯.
+
+2. 服务发现, 查看服务器是否支持该协议
+<1> C -> S 服务发现
+<iq from='juliet@capulet.com/chamber' to='capulet.com' type='get' id='disco1'>
+  <query xmlns='http://jabber.org/protocol/disco#info'/>
+</iq>
+
+<2> S -> C 服务器回应, 支持XEP-0191, 必须返回下面的feature
+<iq from='capulet.com' to='juliet@capulet.com/chamber' type='result' id='disco1'>
+  <query xmlns='http://jabber.org/protocol/disco#info'>
+    ...
+    <feature var='urn:xmpp:blocking'/>
+    ...
+  </query>
+</iq>
+
+3. 获取blocked列表
+<1> C -> S 客户端请求blocklist
+<iq type='get' id='blocklist1'>
+  <blocklist xmlns='urn:xmpp:blocking'/>
+</iq>
+
+<2> S -> C 服务器返回blocklist
+<iq type='result' id='blocklist1'>
+  <blocklist xmlns='urn:xmpp:blocking'>
+    <item jid='romeo@montague.net'/>
+    <item jid='iago@shakespeare.lit'/>
+  </blocklist>
+</iq>
+    
+<3> S -> C 服务器返回空的blocklist
+<iq type='result' id='blocklist1'>
+  <blocklist xmlns='urn:xmpp:blocking'/>
+</iq>
+    
+    
+4. block contact
+<1> C -> S 客户端要求block一个contact
+<iq from='juliet@capulet.com/chamber' type='set' id='block1'>
+  <block xmlns='urn:xmpp:blocking'>
+    <item jid='romeo@montague.net'/>
+  </block>
+</iq>
+
+<2> S -> C 服务器返回结果
+<iq type='result' id='block1'/>
+
+<3> S -> C 服务器把新blocked的联系人推送给用户当前所有的可用资源
+<iq to='juliet@capulet.com/chamber' type='set' id='push1'>
+  <block xmlns='urn:xmpp:blocking'>
+    <item jid='romeo@montague.net'/>
+  </block>
+</iq>
+
+<iq to='juliet@capulet.com/balcony' type='set' id='push2'>
+  <block xmlns='urn:xmpp:blocking'>
+    <item jid='romeo@montague.net'/>
+  </block>
+</iq>
+
+注意:
+a. 如果用户阻止了同一个联系人的通讯, 如果联系人订阅了用户的出席消息,
+   则用户的服务器必须向联系人发送用户unavailable的presence消息.
+   在联系人那边看到用户都是离线的.
+b. 一旦用户阻止了同一个联系人的通讯, 用户的服务器不能发送任何从联系人到
+   用户的的xml stanza, 也就是用户不会接收到任何来自该联系人的信息.
+c. 如何联系人试图发送stanza给用户
+   * presence stanza, 服务器不能回复, 也不能返回错误
+   * message stanza, 服务器应该返回一个error
+   * iq stanza, 服务器必须返回一个error
+d. 如果用户尝试向联系人发送消息, 服务器必须返回一个错误, 也就是这种blocked是
+   双向的.
+
+S -> C 当用户向blocked contact发送消息所收到的错误回复.
+<message type='error' from='romeo@montague.net' to='juliet@capulet.com'>
+  <body>Can you hear me now?</body>
+  <error type='cancel'>
+    <not-acceptable xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+    <blocked xmlns='urn:xmpp:blocking:errors'/>
+  </error>
+</message>
+
+
+5. unblock contact
+<1> C -> S 用户请求unblock一个联系人
+<iq type='set' id='unblock1'>
+  <unblock xmlns='urn:xmpp:blocking'>
+    <item jid='romeo@montague.net'/>
+  </unblock>
+</iq>
+
+<2> S -> C 服务器返回结果
+<iq type='result' id='unblock1'/>
+
+<3> S -> C 服务器把新unblock的联系人推送给用户当前所有的可用资源
+<iq to='juliet@capulet.com/chamber' type='set' id='push3'>
+  <unblock xmlns='urn:xmpp:blocking'>
+    <item jid='romeo@montague.net'/>
+  </unblock>
+</iq>
+
+<iq to='juliet@capulet.com/balcony' type='set' id='push4'>
+  <unblock xmlns='urn:xmpp:blocking'>
+    <item jid='romeo@montague.net'/>
+  </unblock>
+</iq>
+
+6. 用户unblock所有的联系人
+<1> C -> S 客户端请求unblock所有的联系人
+<iq type='set' id='unblock2'>
+  <unblock xmlns='urn:xmpp:blocking'/>
+</iq>
+
+<2> S -> C 服务器返回结果
+<iq type='result' id='unblock2'/>
+
+<3> S -> C 服务器把结果推送给用户当前在线的所有资源
+<iq to='juliet@capulet.com/chamber' type='set' id='push5'>
+  <unblock xmlns='urn:xmpp:blocking'/>
+</iq>
+
+<iq to='juliet@capulet.com/balcony' type='set' id='push6'>
+  <unblock xmlns='urn:xmpp:blocking'/>
+</iq>
+

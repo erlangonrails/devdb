@@ -1,0 +1,125 @@
+介绍XMPP Client登录服务器的过程
+
+概要:
+步骤a - i完成后, Client完成登录.
+a. C向S发送'hello'消息
+b. S回应'hello'消息
+c. S要求SASL, 并提供SASL的方式列表MD5, Plain等
+d. C选择SASL的方式, 如MD5, 并于S进行SASL协商
+e. SASL成功后, C再次向S发送'hello'消息
+f. S回应'hello'消息
+g. S要求'资源绑定' - bind和'建立会话' - session
+h. C和S之间进行'资源绑定'
+i. C和S之间'建立会话'
+
+
+C - Psi       - (user2@localhost)
+S - Ejabberd  - localhost
+
+1. C -> S 连接到服务器发送'hello'消息
+<?xml version="1.0"?>
+<stream:stream xmlns:stream="http://etherx.jabber.org/streams" version="1.0" 
+  xmlns="jabber:client" to="localhost" xml:lang="en" 
+  xmlns:xml="http://www.w3.org/XML/1998/namespace" >
+
+2. S -> C 服务器回应'hello'消息
+<?xml version='1.0'?>
+<stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' 
+  id='1084685649' from='localhost' version='1.0' xml:lang='en'>
+
+3. S -> C 服务器要求SASL(支持MD5和Plain两种SASL的认证方式)
+<stream:features>
+  <mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>
+    <mechanism>DIGEST-MD5</mechanism>
+    <mechanism>PLAIN</mechanism>
+  </mechanisms>
+  <register xmlns='http://jabber.org/features/iq-register'/>
+</stream:features>
+
+备注: 我们的ejabberd服务器没有配置tls, 所以不会要求tls
+如果配置了tls, 会包含如下的
+<stream:features>
+  <starttls xmlns="urn:ietf:params:xml:ns:xmpp-tls">
+    <required/>
+  </starttls>
+  <mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>
+    ...
+  </mechanisms>
+    ...
+</stream:features>
+
+4. C -> S 客户端选择MD5的方式进行SASL认证
+<auth xmlns="urn:ietf:params:xml:ns:xmpp-sasl" mechanism="DIGEST-MD5"/>
+
+5. S -> C (步骤5-9是客户端和服务器进行MD5-SASL认证的过程)
+<challenge xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>
+  bm9uY2U9IjEzNjc0MzYyNDQiLHFvcD0iYXV0aCIsY2hhcnNldD11dGYtOCxhbGdvcml0aG09bWQ1LXNlc3M=
+</challenge>
+
+6. C -> S 
+<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl">
+  dXNlcm5hbWU9InVzZXIyIixub25jZT0iMTM2NzQzNjI0NCIsY25vbmNlPSJDc1RZRy9na09od1BIOEtvT2pGR1ErN2JPTU9uclZ0TlVOVDZZUFFFVlA4PSIsbmM9MDAwMDAwMDEsZGlnZXN0LXVyaT0ieG1wcC9sb2NhbGhvc3QiLHFvcD1hdXRoLHJlc3BvbnNlPTg3ZmMyZjQwNTE2YmEwOWM0ZDVhOThjNmQ2MzIwMjNkLGNoYXJzZXQ9dXRmLTg=</response>
+
+7. S -> C
+<challenge xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>
+  cnNwYXV0aD01OGIzNGIwNGQ5NzcyMjdmZTIzMmMyNTgwYzcyMTc5MQ==
+</challenge>
+
+8. C -> S
+<response xmlns="urn:ietf:params:xml:ns:xmpp-sasl"/>
+
+9. S -> C
+<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>
+
+10. C -> S 客户端发送新的'hello'消息
+<?xml version="1.0"?>
+<stream:stream xmlns:stream="http://etherx.jabber.org/streams" version="1.0" 
+  xmlns="jabber:client" to="localhost" xml:lang="en" 
+  xmlns:xml="http://www.w3.org/XML/1998/namespace">
+
+11. S -> C 服务器回应'hello'消息
+<?xml version='1.0'?>
+<stream:stream xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams' 
+  id='1456378033' from='localhost' version='1.0' xml:lang='en'>
+
+12. S -> C 服务器要求'绑定资源'和'建立一个会话'
+<stream:features>
+  <bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'/>
+  <session xmlns='urn:ietf:params:xml:ns:xmpp-session'/>
+</stream:features>
+
+13. C -> S 客户端申请一个'绑定资源'
+<iq type="set" id="bind_1" >
+  <bind xmlns="urn:ietf:params:xml:ns:xmpp-bind">
+    <resource>kexiaodev</resource>
+  </bind>
+</iq>
+
+14. S -> C 服务器返回'绑定资源'的结果
+<iq id='bind_1' type='result'>
+  <bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'>
+    <jid>user2@localhost/kexiaodev</jid>
+  </bind>
+</iq>
+
+15. C -> S 客户端申请'建立会话'
+<iq xmlns="jabber:client" type="set" id="aad3a" >
+  <session xmlns="urn:ietf:params:xml:ns:xmpp-session"/>
+</iq>
+
+16. S -> C 服务器返回'建立会话'成功
+<iq type='result' xmlns='jabber:client' id='aad3a'>
+  <session xmlns='urn:ietf:params:xml:ns:xmpp-session'/>
+</iq>
+
+到此, Client和Server的一个会话已经建立, 可以根据jabber协议进行其它操作. 
+请求联系人列表, 发消息等.
+
+
+
+
+
+
+
+
+

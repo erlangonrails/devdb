@@ -1,0 +1,457 @@
+XEP-0016: XMPP协议关于隐私部分的内容
+
+这部分内容最初定义在RFC3921中, 后来被单独移出来作为一个单独的协议来实现.
+
+简单的总结隐私列表的功能就是, 隐私列表"改变了默认的基于domain的节路由规则".
+
+1. 接收某人的隐私列表
+<1> C -> S 客户端向服务器请求隐私列表的名字
+<iq from='romeo@example.net/orchard' type='get' id='getlist1'>
+  <query xmlns='jabber:iq:privacy'/>
+</iq>
+
+<2> S -> C 服务器发送隐私列表的名字给客户端, "激活列表"和"缺省列表"放在前面
+<iq type='result' id='getlist1' to='romeo@example.net/orchard'>
+  <query xmlns='jabber:iq:privacy'>
+    <active name='private'/>
+    <default name='public'/>
+    <list name='public'/>
+    <list name='private'/>
+    <list name='special'/>
+  </query>
+</iq>
+
+<3> C -> S 客户端向服务器请求"一个隐私列表" 
+<iq from='romeo@example.net/orchard' type='get' id='getlist2'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='public'/>
+  </query>
+</iq>
+
+<4> S -> C 服务器发送"一个隐私列表"给客户端
+这个是缺省列表, 用户允许所有人通讯, 除了jid=tybalt@example.com的联系人.
+<iq type='result' id='getlist2' to='romeo@example.net/orchard'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='public'>
+      <item type='jid'
+            value='tybalt@example.com'
+            action='deny'
+            order='1'/>
+      <item action='allow' order='2'/>
+    </list>
+  </query>
+</iq>
+
+<5> C -> S 客户端向服务器请求另一个隐私列表
+<iq from='romeo@example.net/orchard' type='get' id='getlist3'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='private'/>
+  </query>
+</iq>
+
+<6> S -> C 服务器发送另一个隐私列表给客户端
+它只允许和这个用户有双向订阅的联系人的通信, 这是激活的列表.
+<iq type='result' id='getlist3' to='romeo@example.net/orchard'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='private'>
+      <item type='subscription'
+            value='both'
+            action='allow'
+            order='10'/>
+      <item action='deny' order='15'/>
+    </list>
+  </query>
+</iq>
+
+<7> C -> S 客户端再向服务器请求另一个隐私列表
+<iq from='romeo@example.net/orchard' type='get' id='getlist4'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='special'/>
+  </query>
+</iq>
+
+<8> S -> C 服务器再发送另一个隐私列表给客户端
+它只允许三个指定的实体通信
+<iq type='result' id='getlist4' to='romeo@example.net/orchard'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='special'>
+      <item type='jid'
+            value='juliet@example.com'
+            action='allow'
+            order='6'/>
+      <item type='jid'
+            value='benvolio@example.org'
+            action='allow'
+            order='7'/>
+      <item type='jid'
+            value='mercutio@example.org'
+            action='allow'
+            order='42'/>
+      <item action='deny' order='666'/>
+    </list>
+  </query>
+</iq>
+
+发生错误的情况
+<9> 客户端尝试接收"不存在的列表"
+S -> C 
+<iq to='romeo@example.net/orchard' type='error' id='getlist5'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='The Empty Set'/>
+  </query>
+  <error type='cancel'>
+    <item-not-found
+        xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+  </error>
+</iq>
+
+<10> 用户在一次只被允许接收一个列表, 如果用户尝试同一个请求中接收超过一个列表, 
+服务器必须(MUST)返回一个<bad request/>节错误给用户.
+S -> C
+<iq to='romeo@example.net/orchard' type='error' id='getlist6'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='public'/>
+    <list name='private'/>
+    <list name='special'/>
+  </query>
+  <error type='modify'>
+    <bad-request
+        xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+  </error>
+</iq>
+
+2. 管理激活列表
+<1> C -> S 客户端请求激活列表变更
+<iq from='romeo@example.net/orchard' type='set' id='active1'>
+  <query xmlns='jabber:iq:privacy'>
+    <active name='special'/>
+  </query>
+</iq>
+
+<2> S -> C 服务器承认激活列表变更成功
+<iq type='result' id='active1' to='romeo@example.net/orchard'/>
+
+<3> S -> C (如果客户端尝试设置一个不存在的列表作为激活列表)
+服务器返回<item-not-found/>错误
+<iq to='romeo@example.net/orchard' type='error' id='active2'>
+  <query xmlns='jabber:iq:privacy'>
+    <active name='The Empty Set'/>
+  </query>
+  <error type='cancel'>
+    <item-not-found
+        xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+  </error>
+</iq>
+
+<4> C -> S 客户端"取消"使用激活列表
+<iq from='romeo@example.net/orchard' type='set' id='active3'>
+  <query xmlns='jabber:iq:privacy'>
+    <active/>
+  </query>
+</iq>
+
+<5> S -> C
+<iq type='result' id='active3' to='romeo@example.net/orchard'/>
+
+3. 管理缺省列表
+注意: 缺省列表(它对用户来说是全局应用的, 不只是发送中的资源)
+<1> C -> S 用户请求变更缺省列表
+<iq from='romeo@example.net/orchard' type='set' id='default1'>
+  <query xmlns='jabber:iq:privacy'>
+    <default name='special'/>
+  </query>
+</iq>
+
+<2> S -> C 服务器承认缺省列表变更成功
+<iq type='result' id='default1' to='romeo@example.net/orchard'/>
+
+<3> S -> C (如果用户尝试变更一个缺省列表但是这个缺省列表正在由至少一个已连接的但不是当前
+发送中的这个资源使用着)服务器必须(MUST)返回一个<conflict/>节错误给发送中的资源
+<iq to='romeo@example.net/orchard' type='error' id='default1'>
+  <query xmlns='jabber:iq:privacy'>
+    <default name='special'/>
+  </query>
+  <error type='cancel'>
+    <conflict
+        xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+  </error>
+</iq>
+
+<4> S -> C (如果用户尝试设置一个缺省列表但是这个列表的名字不存在)
+服务器必须(MUST)返回一个<item-not-found/>节错误给用户
+<iq to='romeo@example.net/orchard' type='error' id='default1'>
+  <query xmlns='jabber:iq:privacy'>
+    <default name='The Empty Set'/>
+  </query>
+  <error type='cancel'>
+    <item-not-found
+        xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+  </error>
+</iq>
+
+<5> C -> S 为了取消使用缺省列表(换言之, 任何时候都使用域的节路由规则), 
+用户必须(MUST)发送一个空的不带'name'属性的<default/>元素
+<iq from='romeo@example.net/orchard' type='set' id='default2'>
+  <query xmlns='jabber:iq:privacy'>
+    <default/>
+  </query>
+</iq>
+
+<6> S -> C 服务器承认成功地取消了任何缺省列表
+<iq type='result' id='default2' to='romeo@example.net/orchard'/>
+
+<7> S -> C (如果一个已连接的资源尝试取消一个用户全局的缺省列表但是这个缺省列表
+正在应用于另一个已连接的资源)服务器必须(MUST)返回一个<conflict/>错误给发送中的资源
+<iq to='romeo@example.net/orchard' type='error' id='default3'>
+  <query xmlns='jabber:iq:privacy'>
+    <default/>
+  </query>
+  <error type='cancel'>
+    <conflict
+        xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+  </error>
+</iq>
+
+4. 编辑隐私列表
+<1> C -> S 客户端编辑隐私列表
+a. list下它包含了列表中的"所有元素"以指明用户期望的对列表的变更
+b. 任何给定的条目的'order'属性值不是固定的. 因而在前述的例子中如果用户想在
+"tybalt@example.com"条目和"paris@example.org"条目之间增加4个条目, 用户的
+客户端必须(MUST)在向服务器提交列表之前对相关的条目重新编号.
+
+<iq from='romeo@example.net/orchard' type='set' id='edit1'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='public'>
+      <item type='jid'
+            value='tybalt@example.com'
+            action='deny'
+            order='3'/>
+      <item type='jid'
+            value='paris@example.org'
+            action='deny'
+            order='5'/>
+      <item action='allow' order='68'/>
+    </list>
+  </query>
+</iq>
+
+<2> S -> C 服务器承认列表编辑成功
+<iq type='result' id='edit1' to='romeo@example.net/orchard'/>
+
+<3> S -> C 基于列表编辑的隐私列表推送
+服务器必须(MUST)现在发送一个 隐私列表推送"privacy list push"给所有已连接的资源
+<iq to='romeo@example.net/orchard' type='set' id='push1'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='public'/>
+  </query>
+</iq>
+<iq to='romeo@example.net/home' type='set' id='push2'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='public'/>
+  </query>
+</iq>
+
+<4> C -> S 承认收到一个隐私列表推送
+<iq from='romeo@example.net/orchard'
+    type='result'
+    id='push1'/>
+<iq from='romeo@example.net/home'
+    type='result'
+    id='push2'/>
+
+5. 增加一个新的隐私列表
+增加一个新的列表和编辑一个现有的列表使用的协议是相同的. 如果列表名和现有的列表名吻合, 
+这个增加新列表的请求将复写那个旧的列表. 正如编辑列表一样, 服务器也必须(MUST)发送一个 
+隐私列表推送"privacy list push" 给所有已连接的资源.
+
+6. 移除一个隐私列表
+<1> C -> S 客户端移除一个隐私列表
+<iq from='romeo@example.net/orchard' type='set' id='remove1'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='private'/>
+  </query>
+</iq>
+
+<2> S -> C 服务器承认成功地移除列表
+<iq type='result' id='remove1' to='romeo@example.net/orchard'/>
+
+注意: 错误处理
+如果一个用户尝试移除一个列表而这个列表正在被应用于至少一个和发送中的资源不同的已连接的资源,
+ 服务器必须(MUST)返回一个<conflict/>节错误给用户; 换言之, 用户在尝试移除它之前必须(MUST)
+先设置另一个列表成为激活或缺省列表. 如果用户尝试移除一个列表但是列表名字不存在, 服务器必须
+(MUST)返回一个<item-not-found/>节错误给用户. 如果用户尝试在同一个请求中移除超过一个的
+列表, 服务器必须(MUST)反回一个<bad request/>节错误给用户.
+
+7. 屏蔽消息
+服务器端的隐私列表使得一个用户可以基于实体的JID,名册组,或订阅状态(或全局地)来屏蔽从其他实
+体引入的消息.
+主要在以下基本层面屏蔽通讯:
+a. 屏蔽消息message
+b. 屏蔽入站的出席信息presence-in
+c. 屏蔽出站的出席信息presence-out
+d. 屏蔽iq-stanza
+e. 屏蔽所有通讯
+
+
+
+注意: 为了精简, "result"类型的IQ节没有在以下例子中显示, "隐私列表推送"也没有显示.
+
+<1> C -> S 发送基于JID的用户消息屏蔽
+成功后, 用户将不会"接收到"从特定JID发来的消息. 
+<iq from='romeo@example.net/orchard' type='set' id='msg1'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='message-jid-example'>
+      <item type='jid'
+            value='tybalt@example.com'
+            action='deny'
+            order='3'>
+        <message/>
+      </item>
+    </list>
+  </query>
+</iq>
+
+<2> C -> S 全局的用户消息屏蔽
+成功后, 用户将不会"接收到"从任何其他用户发来的消息. 
+<iq from='romeo@example.net/orchard' type='set' id='msg4'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='message-global-example'>
+      <item action='deny' order='6'>
+        <message/>
+      </item>
+    </list>
+  </query>
+</iq>
+
+<3> C -> S 发送基于JID的入站的出席信息屏蔽
+注意: : 出席信息通知不包括"出席信息订阅", 只是把出席信息广播给当前已订阅某个联系人
+的出席信息的用户. 所以它只包括没有'type'属性的或type='unavailable'的出席信息节.
+
+成功后, 用户将不会收到从指定JID发来的出席信息通知
+<iq from='romeo@example.net/orchard' type='set' id='presin1'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='presin-jid-example'>
+      <item type='jid'
+            value='tybalt@example.com'
+            action='deny'
+            order='7'>
+        <presence-in/>
+      </item>
+    </list>
+  </query>
+</iq>
+
+<4> C -> S 全局的入站的出席信息用户屏蔽
+成功后, 用户将不会从任何其他实体收到出席信息通知. 
+<iq from='romeo@example.net/orchard' type='set' id='presin4'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='presin-global-example'>
+      <item action='deny' order='11'>
+        <presence-in/>
+      </item>
+    </list>
+  </query>
+</iq>
+
+<5> C -> S 发送基于JID的出站出席信息屏蔽
+成功后, 用户将不会给指定JID发送出席信息通知
+<iq from='romeo@example.net/orchard' type='set' id='presout1'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='presout-jid-example'>
+      <item type='jid'
+            value='tybalt@example.com'
+            action='deny'
+            order='13'>
+        <presence-out/>
+      </item>
+    </list>
+  </query>
+</iq>
+
+<6> C -> S 全局的出站的出席信息用户屏蔽
+成功后, 用户将不会向任何其他用户发送出席信息通知. 
+<iq from='romeo@example.net/orchard' type='set' id='presout4'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='presout-global-example'>
+      <item action='deny' order='23'>
+        <presence-out/>
+      </item>
+    </list>
+  </query>
+</iq>
+
+<7> C -> S 发送基于JID的IQ-Stanza屏蔽
+成功后, 用户将不会"收到"从指定JID发来的IQ节. 
+<iq from='romeo@example.net/orchard' type='set' id='iq1'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='iq-jid-example'>
+      <item type='jid'
+            value='tybalt@example.com'
+            action='deny'
+            order='29'>
+         <iq/>
+       </item>
+    </list>
+  </query>
+</iq>
+
+<8> C -> S 全局的IQ-Stanza屏蔽
+成功后, 用户将不会收到从任何其他用户发来的IQ节. 
+<iq from='romeo@example.net/orchard' type='set' id='iq4'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='iq-global-example'>
+      <item action='deny' order='1'>
+        <iq/>
+      </item>
+    </list>
+  </query>
+</iq>
+
+<9> C -> S 发送基于JID的屏蔽所有通讯
+成功后, 用户将不会"收到和发送"任何通信给指定JID. 
+<iq from='romeo@example.net/orchard' type='set' id='all1'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='all-jid-example'>
+      <item type='jid'
+            value='tybalt@example.com'
+            action='deny'
+            order='23'/>
+    </list>
+  </query>
+</iq>
+
+<10> C -> S 全局的屏蔽所有通讯
+成功后, 用户将不会"收到和发送"和指定订阅状态的任何实体的通信. 
+<iq from='romeo@example.net/orchard' type='set' id='all4'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='all-global-example'>
+      <item action='deny' order='7'/>
+    </list>
+  </query>
+</iq>
+
+8. 尝试和已屏蔽的用户通讯
+<1> C -> S 已被屏蔽的实体尝试发送 IQ get:
+<iq type='get'
+    to='romeo@example.net'
+    from='tybalt@example.com/pda'
+    id='probing1'>
+  <query xmlns='jabber:iq:version'/>
+</iq>
+
+<2> S -> C 务器返回一个错误给已被屏蔽的实体: 
+<iq type='error'
+    from='romeo@example.net'
+    to='tybalt@example.com/pda'
+    id='probing1'>
+  <query xmlns='jabber:iq:version'/>
+  <error type='cancel'>
+    <service-unavailable
+        xmlns='urn:ietf:params:xml:ns:xmpp-stanzas'/>
+  </error>
+</iq>
+
+
+
+
+

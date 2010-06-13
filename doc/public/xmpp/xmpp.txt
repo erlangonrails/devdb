@@ -1,0 +1,226 @@
+RFC3920: 可扩展的消息和出席信息协议 (XMPP): 核心协议
+RFC3921: 可扩展的消息和出席信息协议 (XMPP): 即时消息和出席信息
+
+------- RFC3920 - begin -------
+1. 基本点:
+<1> 客户端和服务器, 服务器和服务器之间使用TCP连接, 
+    建议客户端到服务器连接使用5222端口.
+
+<2> JID: [ node "@" ] domain [ "/" resource ]
+    其中只有domain是必须的, 其它node和resource都是可选择的.
+
+2. XML流的概念
+两个基本概念: "xml流"和"xml节"
+<1> xml流
+    一个XML流是一个容器, 包含了两个实体之间通过网络交换的XML元素.
+    一个XML流是由一个XML打开标签<stream>开始的, 流的结尾则是一个
+    XML关闭标签</stream>.
+
+<2> xml节
+    一个XML节是一个实体通过XML流向另一个实体发送的结构化信息中的一个
+    离散的语义单位.
+    一个XML节直接存在于根元素<stream>的下一级, 可以包含属性, 子元素来
+    描述详细的信息.
+    XML节仅限于<message>, <presence>,和<iq>元素
+
+    注意:
+    为TLS握手, SASL握手, 服务器回拨的需要而发送的XML元素,不被认为是一个XML节.
+
+    一个XML流相当于一个会话期间所有XML节的一个"信封".
+    |---------------------------- 
+    | <stream> 
+    |---------------------------- 
+    | <presence> 
+    |   <show/> 
+    | </presence> 
+    |---------------------------- 
+    | <message to='foo'> 
+    |   <body/> 
+    | </message> 
+    |---------------------------- 
+    | <iq to='bar'> 
+    |   <query/> 
+    | </iq> 
+    |---------------------------- 
+    | ... 
+    |---------------------------- 
+    | </stream> 
+    |---------------------------- 
+
+3. 绑定到TCP, C -> S和S -> S的区别:
+<1> C -> S   双向的TCP连接
+    S -> S   单向的TCP连接
+
+<2> 在客户和服务器通信的过程中, 服务器必须允许客户端共享一个TCP连接来传输XML节,
+    包括从客户端传到服务器和从服务器传到客户端.
+    在服务器之间的通信过程中, 服务器必须用一个TCP连接向对方发送XML节, 另一个TCP连接
+    (由对方初始化)接收对方的XML节, 一共两个 TCP连接.
+
+4. XML 流的三个主要属性: to, from, id  (注意: 是流的属性, 而不是节的属性)
+<1> 注意这三个属性应该在初始化方还是接收方创建.
+    id: 一个由接收实体创建的具有唯一性的ID,一个初始实体和接收实体之间的会话ID,
+        并且它在接收方的应用程序中(通常是一个服务器)必须是唯一的.
+   
+            初始化方发给接收方   接收方发给初始化方
+    to 	    接收方的主机名      忽略
+    from    忽略 	      接收方的主机名
+    id 	    忽略 	      会话键值 
+
+5. XML 节的通用属性: to, from, id, type, xml:lang
+<1> 这5个属性通用于message, presence, iq
+
+<2> id: 可选的'id'属性可以用于为节的内部跟踪发送实体, 从IQ节语义来讲, 就是通过发送和接收这些节来跟踪“请求-应答”型的交互行为.
+        这个可选的'id'属性值在一个域或一个流中是全局唯一的.
+    type: 指明消息、出席信息或IQ节的意图或上下文的详细信息.
+ 
+6. 基本"语意学"
+<1> message
+    <message>节类型可以被看作是一个"push"机制用于一个实体推送信息给另一个实体. 
+
+<2> presence
+    <presence>元素可以被看作一个基本的广播或“出版-订阅”机制,用于多个实体接收某个已
+    订阅的实体的信息(在这里,是网络可用性信息).
+
+<3> iq
+    信息/查询(Info/Query),是一个请求-回应机制,某些情况下类似HTTP.
+
+------- RFC3920 - end   -------
+
+
+
+------- RFC3921 - begin -------
+1. 交换信息 - message
+   <thread>指定消息处于哪个会话线索, 用于跟踪会话
+   
+   <message
+       to='romeo@example.net/orchard'
+       from='juliet@example.com/balcony'
+       type='chat'
+       xml:lang='en'>
+     <subject>test msg/subject>
+     <body>this is a test msg</body>
+     <thread>e0ffe42b28561960c6b12b944a092794b9683a38</thread>
+   </message>
+   <message
+       to='juliet@example.com/balcony'
+       from='romeo@example.net/orchard'
+       type='chat'
+       xml:lang='en'>
+     <subject>test msg/subject>
+     <body>i received your test msg</body>
+     <thread>e0ffe42b28561960c6b12b944a092794b9683a38</thread>
+   </message>
+
+2. 交换出席信息 - presence
+<1> 客户端登录服务器之后的处理逻辑:
+    a. 建立起一个会话之后, 客户端应该发送初始化出席信息给服务器来通知它的通信可用性.
+       在发送初始化出席信息之后, 一个激活的资源被称为-可用的资源"available resource".
+    b. 服务器代替用户发送"查看订阅的人的状态的探测信息"(这些信息不能发送给已经屏蔽了的联系人)
+    c. 服务器代替用户发送"用户的状态给订阅该用户的人"(这些信息不能发送给已经屏蔽了用户的联系人)
+    e. 联系人的服务器代替所有可用的资源应答出席信息调查.
+    f. 联系人的服务器递送用户的初始化出席信息给所有可用的资源
+
+    下面是一条 C -> S的出席信息, 表明可用状态.
+    <presence>
+      <show>dnd</show>
+    </presence>
+
+<2> 管理订阅
+    a. 请求一个订阅
+    <presence to='juliet@example.com' type='subscribe'/>
+    b. 处理一个订阅请求
+    <presence to='romeo@example.net' type='subscribed'/>
+    <presence to='romeo@example.net' type='unsubscribed'/>
+    c. 如果一个用户想取消一个曾经允许的订阅请求
+    <presence to='romeo@example.net' type='unsubscribed'/>
+    d. 如果用户想取消对于另一个实体的出席信息的订阅
+    <presence to='juliet@example.com' type='unsubscribe'/>
+
+3. 名册管理Roster
+<1> 订阅规则:
+    和一个名册条目相关的出席信息订阅的状态从<item>元素的'subscription'属性可以得到.
+    这个属性允许的值包括: 
+    "none" -- 这个用户没有对这个联系人出席信息的订阅, 这个联系人也没有订阅用户的出席信息 
+    "to" -- 这个用户订阅了这个联系人的出席信息, 但是这个联系人没有订阅用户的出席信息 
+    "from" -- 这个联系人订阅了用户的出席信息, 但是这个用户没有订阅这个联系人的出席信息 
+    "both" -- 用户和联系人互相订阅了对方的出席信息 
+
+<2> 登录的时候接收一个名册(注意iq的type属性 - get):
+    C -> S
+    <iq from='juliet@example.com/balcony' type='get' id='roster_1'>
+      <query xmlns='jabber:iq:roster'/>
+    </iq>
+
+    S -> C
+    <iq to='juliet@example.com/balcony' type='result' id='roster_1'>
+     <query xmlns='jabber:iq:roster'>
+       <item jid='romeo@example.net'
+             name='Romeo'
+             subscription='both'>
+         <group>Friends</group>
+       </item>
+       <item jid='mercutio@example.org'
+             name='Mercutio'
+             subscription='from'>
+         <group>Friends</group>
+       </item>
+       <item jid='benvolio@example.org'
+             name='Benvolio'
+             subscription='both'>
+         <group>Friends</group>
+       </item>
+     </query>
+   </iq>
+
+<3> 增加一个item(注意iq的type属性 - set):
+    这个Clinet对应的JID有两个可用的资源.
+    (更新, 删除一个item的逻辑请参考详细文档)
+
+    C -> S
+    <iq from='juliet@example.com/balcony' type='set' id='roster_2'>
+     <query xmlns='jabber:iq:roster'>
+       <item jid='nurse@example.com'
+             name='Nurse'>
+         <group>Servants</group>
+       </item>
+     </query>
+   </iq>
+   S -> C
+   a. 推送更新的名册信息给所有已请求名册的可用资源(balcony, chamber)
+   b. 以一个IO结果应答发送的资源:
+   <iq to='juliet@example.com/balcony'
+       type='set'
+       id='a78b4q6ha463'>
+     <query xmlns='jabber:iq:roster'>
+       <item jid='nurse@example.com'
+             name='Nurse'
+             subscription='none'>
+         <group>Servants</group>
+       </item>
+     </query>
+   </iq>
+   <iq to='juliet@example.com/chamber'
+       type='set'
+       id='a78b4q6ha464'>
+     <query xmlns='jabber:iq:roster'>
+       <item jid='nurse@example.com'
+             name='Nurse'
+             subscription='none'>
+         <group>Servants</group>
+       </item>
+     </query>
+   </iq>
+   <iq to='juliet@example.com/balcony' type='result' id='roster_2'/>
+
+   C -> S 所有资源(balcony, chamber)应答
+   <iq from='juliet@example.com/balcony'
+       to='example.com'
+       type='result'
+       id='a78b4q6ha463'/>
+   <iq from='juliet@example.com/chamber'
+       to='example.com'
+       type='result'
+       id='a78b4q6ha464'/>
+
+
+------- RFC3921 - end -------

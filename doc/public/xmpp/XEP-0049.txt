@@ -1,0 +1,42 @@
+XEP-0049 private XML Storage
+
+用户需要在IM Server端存储私有的数据, 可以使用该协议.
+一个Jabberd客户端可以通过发送一个type="set"的<iq/>stanza, 在这个<iq/>stanza中
+包含一个命名空间为"jabberd:iq:private"的<query/>子元素, <query/>子元素中的XML数据会在Server端存储. 
+
+1. 客户端存储私有数据
+<1> C -> S 用户发出"存储私有数据的请求", 注意命名空间jabberd:iq:private
+<iq type="set" id="1001">
+  <query xmlns="jabber:iq:private">  
+    <exodus xmlns="exodus:prefs">
+      <defaultnick>Hamlet</defaultnick>
+    </exodus>
+  </query>
+</iq>
+
+<2> S -> C 服务器返回处理结果
+<iq type="result"
+    from="hamlet@shakespeare.lit/denmark"
+    to="hamlet@shakespeare.lit/denmark"
+    id="1001"/>
+
+2. 客户端获取私有数据
+<1> C -> S 客户端发出"获取私有数据的请求"
+CLIENT:
+<iq type="get" id="1002">
+  <query xmlns="jabber:iq:private">
+    <exodus xmlns="exodus:prefs"/>
+  </query>
+</iq>
+
+<2> S -> C 服务器返回私有数据给客户端
+<iq type="result"
+    from="hamlet@shakespeare.lit/denmark"
+    to="hamlet@shakespeare.lit/denmark"
+    id="1002">
+  <query xmlns="jabber:iq:private">
+    <exodus xmlns="exodus:prefs">
+      <defaultnick>Hamlet</defaultnick>
+    </exodus>
+  </query>
+</iq>
