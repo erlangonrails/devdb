@@ -1,0 +1,9 @@
+$randoms.erl
+
+1. 如何使用该模块?
+<1> 使用该模块之前必须先启动模块
+    randoms:start().
+
+<2> 返回长度为10的随机的字符串(都是数字)
+    randoms:get_string() -> "2665349119"
+    randoms:get_string() -> "3100420310"
