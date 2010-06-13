@@ -1,0 +1,40 @@
+1. 把这些写到 /etc/sysctl.conf中然后运行 sysctl -p 使其生效
+net.core.rmem_max = 16777216
+net.core.wmem_max = 16777216
+net.ipv4.tcp_rmem = 4096 87380 16777216
+net.ipv4.tcp_wmem = 4096 65536 16777216
+net.ipv4.tcp_syncookies = 1
+net.ipv4.tcp_mem = 50576   64768   98152
+net.core.netdev_max_backlog = 2500
+net.ipv4.ip_local_port_range = 1024 65535
+
+2. 通过修改/etc/security/limits.conf ,但是这需要注销再登陆
+暂时性的解决方式是: ulimit -n 999999
+
+把下面的内容写入到limits.conf中
+*        hard    nofile         999999
+*        soft    nofile         999999
+root     hard    nofile         999999
+root     soft    nofile         999999
+
+说明:
+type： 有soft, hard和-, soft指的是当前系统生效的设置值.
+hard 表明系统中所能设定的最大值. soft的限制不能比hard限制高.
+用-就表明同时设置了soft和hard的值.
+
+nofile: 打开文件的最大数目
+
+3. Erlang方面的优化
+<1> 使用下面命令查看erlang允许的并发进程的上限, 默认是32767, 我们可以在启动erlang的时候使用+P参数来修改这个值.
+文档中134217727是最大值.
+erl +P 134217727
+
+erlang:system_info(process_limit).
+134217727
+
+<2> 是否开启kernel poll functionality的功能, 默认是关闭的, 如果当前系统不支持poll, 使用+K true启动后会抛出警告信息.
+erl +K false  默认情况
+erl +K true
+
+
+
