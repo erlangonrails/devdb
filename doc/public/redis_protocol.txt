@@ -1,0 +1,113 @@
+
+Redis Protocol简介
+
+1. Protocol specification
+Redis协议在设计的时候是对计算机方便解析和人肉方便解析的一个折中.
+
+2. Networking layer
+Redis Client和Redis Server之间通过TCP连接, Server侦听的端口是6379,
+在Client和Server之间传输的每一个命令或者数据(command or data)都用"\r\n"(CRLF)结尾.
+
+3. Simple INLINE commands
+inline command是最简单的命令, 例如:
+C: PING
+S: +PONG
+C: EXISTS somekey1
+S: :0
+C: EXISTS somekey2
+S: :1
+一个inline command是客户端发送的CRLF-terminated string, 服务器可以以以下几种方式回复:
+  a. 发送error message, 第一个字节是"-"
+  b. 发送single line reply, 第一个字节是"+"
+  c. 发送bulk data, 第一个字节是"$"
+  d. 发送multi-bulk data, 第一个字节是"*"
+  e. 发送integer number, 第一个字节是":"
+
+4. Bulk commands
+一个bulk command和inline command类似, 但是命令的最后一个参数必须是一个发送给服务器端的字节流
+(stream of bytes), SET命令就是一个bulk command, 例如:
+C: SET key1 4
+C: val1
+S: +OK
+
+我们可以这样理解上面的bulk command: "SET key1 4\r\nval1"
+
+5. Bulk replies
+服务器在回复一个inline/bulk command的时候, 可以是一个bulk reply的格式, 例如:
+C: GET key1
+S: $4
+S: val1
+
+我们可以这样理解上面的bulk reply: "$4\r\nval1\r\n"
+如果我们请求GET一个不存在的key, 返回$-1
+C: GET key2
+S: $-1
+
+6. Multi-Bulk replies
+有些command, 比如LRANGE会返回多个值, 这个时候使用的是multiple bulk write的方式,
+第一行以"*"开头, 并紧跟一个数字, 表示返回的bulk的数量, 后面是实际返回的bulk.
+例如:
+C: LPUSH newlist 4
+C: val1
+S: :1
+C: LPUSH newlist 4
+C: val2
+S: :2
+C: LPUSH newlist 4
+C: val3
+S: :3
+C: LRANGE newlist 0 4
+S: *3
+S: $4
+S: val3
+S: $4
+S: val2
+S: $4
+S: val1
+
+注意: 如果key不存在, 会返回*0
+LRANGE newlist1 0 4
+*0
+
+7. Nil elements in Multi-Bulk replies
+这是一种特殊情况, 就是multi-bulk replies返回的实际元素中, 可能有长度为$-1的元素, 也就是nil元素,
+客户端应该要处理这种情况.
+*3
+$4
+val1
+$-1
+$4
+val2
+
+8. Single line reply
+通常是下面这种形式:
++OK
+
+9. Integer reply
+通常是下面这种形式:
+:1000
+
+10. Multi bulk commands
+C: SET newkey 6
+C: newval
+S: +OK
+
+我们可以用如下的multi buld command的方式来替换上面的bulk command:
+C: *3
+C: $3
+C: SET
+C: $6
+C: newkey
+C: $6
+C: newval
+S: +OK
+
+
+
+
+
+
+
+
+
+
