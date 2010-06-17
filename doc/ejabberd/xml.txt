@@ -1,4 +1,6 @@
-$
+$expat_erl.c
+$xml.erl
+$xml_stream.erl
 
 
 1. xml模块
