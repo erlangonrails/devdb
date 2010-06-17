@@ -1,0 +1,32 @@
+$iconv_erl.c
+$iconv.erl
+
+1. 模块的依赖
+该模块对依赖C的port driver: iconv_erl.so, 这个模块是自己实现的, 不依赖于外部的库.
+(编译iconv_erl.so需要包含iconv.h, 标准linux系统目前都会自带这个库, 无须额外安装)
+
+
+2. 模块的使用:
+<1> iconv是一个gen_server模块, 使用之前调用iconv:start/0或者
+    iconv:start_link/0启动.
+
+<2> Utf8Str = "这是一条测试数据",
+    ResGB2312 = iconv:convert("UTF8", "GB2312", Utf8Str)  - UTF8转换为GB2312
+    ResUTF8 = iconv:convert("GB2312", "UTF8", ResGB2312)  - GB2312转换为UTF8
+
+
+3. 测试代码:
+-module(iconv_test).
+-export([init/0, run/0]).
+
+init() ->
+    iconv:start_link().
+
+run() ->
+    Utf8Str = "这是一条测试数据",
+    ResGB2312 = iconv:convert("UTF8", "GB2312", Utf8Str),
+    ResUTF8 = iconv:convert("GB2312", "UTF8", ResGB2312),
+    io:format("UTF8: ~w~n", [Utf8Str]),
+    io:format("GB2312: ~w~n", [ResGB2312]),
+    io:format("UTF8: ~w~n", [ResUTF8]).
+    

@@ -1,0 +1,71 @@
+$ejabberd_zlib_drv.c
+$ejabberd_zlib.erl
+
+1. 模块的依赖
+该模块依赖C的Port driver: ejabberd_zlib_drv.so, 在ubuntu下依赖zlib1g-dev包.
+(zlib1g-dev这个包默认已经安装在ubuntu linux系统中, 无须特定安装)
+
+2. 模块的功能 & 原理:
+该模块就是提供了一个对数据进行压缩也解压的接口, 步骤是在发送数据之前进行压缩,
+压缩完成后发送; 在收到数据后进行解压, 解压完成后交给其它模块处理. 实质上就是一个
+处理zlib的管道.
+
+<1>发送数据的过程
+   压缩 -> 交给socket发送数据
+   例如:
+   a. Data 
+   b. -> 压缩数据(Deflate-Packet) 
+   c. -> gen_tcp:send(Socket, Deflate-Packet) -> ok | {error, Reason}
+       
+<2>接收数据的过程
+   socket接收数据 -> 解压
+   例如:
+   a. gen_tcp:recv(Socket, Length, Timeout)  -> {ok, Deflate-Packet} | {error, Reason} 
+   b. -> 解压数据(Inflate-Packet) 
+   c. -> Data
+
+3. 测试例子:
+-module(zlib_test).
+-export([run/0]).
+
+%% 这两个宏拷贝自ejabberd_zlib.erl
+-define(DEFLATE, 1). %% - 压缩
+-define(INFLATE, 2). %% - 解压
+
+%% 这个例子演示了C的dirver - ejabberd_zlib_drv.so的使用方式
+
+str() ->
+    "this is test string - 1,this is test string - 2," ++
+    "this is test string - 3,this is test string - 4," ++
+    "this is test string - 5,this is test string - 6," ++
+    "this is test string - 7,this is test string - 8," ++
+    "this is test string - 9,this is test string - 10," ++
+    "this is test string - 11,this is test string - 12," ++ 
+    "this is test string - 13,this is test string - 14.".
+
+run() ->
+    erl_ddll:load_driver(".", ejabberd_zlib_drv),
+    Port = open_port({spawn, ejabberd_zlib_drv}, [binary]),
+    {ok, Res1} = deflate(Port, str()),
+    {ok, Res2} = inflate(Port, Res1),
+    io:format("data   : ~p~n", [str()]),
+    io:format("deflate: ~p~n", [Res1]),
+    io:format("inflate: ~p~n", [Res2]).
+
+%% 压缩
+deflate(Port, Data) ->
+    case port_control(Port, ?DEFLATE, Data) of
+	<<0, Out/binary>> ->
+	    {ok, Out};
+	<<1, Error/binary>> ->
+	    {error, binary_to_list(Error)}
+    end.
+
+%% 解压
+inflate(Port, Data) ->
+    case port_control(Port, ?INFLATE, Data) of
+	<<0, In/binary>> ->
+	    {ok, In};
+	<<1, Error/binary>> ->
+	    {error, binary_to_list(Error)}
+    end.
