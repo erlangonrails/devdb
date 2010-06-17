@@ -1,0 +1,58 @@
+$treap.erl
+
+1. 概念:
+<1> 二叉搜索树(BST)
+    二叉搜索树（Binary Search Tree）, 或者是一棵空树.
+    a. 若它的左子树不空, 则左子树上所有结点的值均小于它的根结点的值.
+    b. 若它的右子树不空, 则右子树上所有结点的值均大于它的根结点的值.
+    c. 它的左, 右子树也分别为二叉搜索树.
+
+<2> 二叉堆(Binary Heap)
+    二叉堆是一种特殊的堆, 二叉堆是完全二叉树或者是近似完全二叉树.
+    二叉堆满足堆特性:
+    a. 父结点的键值总是大于或等于(小于或等于)任何一个子节点的键值, 且每个结点的左子树和右子
+       树都是一个二叉堆(都是最大堆或最小堆).
+    b. 当父结点的键值总是大于或等于任何一个子节点的键值时为最大堆.
+    c. 当父结点的键值总是小于或等于任何一个子节点的键值时为最小堆.
+
+<3> Treap=Tree+Heap.
+    Treap本身是一棵二叉搜索树, 它的左子树和右子树也分别是一个Treap, 和一般的二叉搜索树不同
+    的是, Treap纪录一个额外的数据,就是Priority
+    Treap在以Key构成二叉搜索树的同时, 还按Priority来满足堆的性质.
+    Treap和二叉堆有一点不同, 就是二叉堆必须是完全二叉树，而Treap可以并不一定是.
+
+2. 我们实现的是一个满足最大堆的treap, 也就是根节点的priority最大.
+
+3. 在构造treap的时候, 使用了"旋转"的技术
+
+4. 一个treap的例子(满足最大堆):
+   [Key:Prority]
+
+               [Key14:23]
+               /        \
+         [Key12:22]   [Key15:16]
+         /        \           \
+   [Key3:12]   [Key13:11]    [Key18:12]
+                               /
+                          [Key17:6]
+
+5. APIs:
+a. 构造一个空的treap 
+   empty() -> Treap
+b. treap插入一个新的节点, 返回一个新的treap
+   insert(Key, Priority, Value, Tree) 
+c. treap删除一个节点, 返回一个新的treap
+   delete(Key, Tree)
+d. 判断一个treap是否为空, 如果为空返回true, 否则返回false.
+   is_empty(Treap)
+e. treap查找, 成功返回{ok, Priority, Value}
+   失败返回error
+   lookup(Key, Treap)
+f. 遍历treap的接口, 根据自定义的F({Key, Priority, Value}, Acc)函数来遍历treap,
+   最后返回AccRes.
+   fold(F, Acc, Treap)
+g. 如果treap不为空, 则返回{Key, Priority, Val}, 如果treap为空, 抛出异常.
+   get_root(Treap)
+h. 删除treap的根节点, 返回一个新的treap, 如果treap为空, 则抛出异常.
+   delete_root(Treap).
+
