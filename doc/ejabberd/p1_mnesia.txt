@@ -1,0 +1,142 @@
+$p1_mnesiqa.erl
+
+1. 模块分析:
+-module(p1_mnesia).
+
+-export([count_records/2]).
+
+%%====================================================================
+%% 1. 模块的作用, 计算Mnseia数据库中某个表满足MatchExpression的记录的个数.
+%%    使用逐步累加的方式, 减少内存的使用.
+%% 2. 这个方法只能用在mnesia事务中.
+%%
+%% 3. 例子:
+%% -record(user, {name, sex}).
+%% test() ->
+%%     setup_db(),
+%%     db_filler(Count).
+%%     MatchExpression = #user{sex = 1, _ = '_'}, %% 测试sex=1的用户
+%%     %% MatchExpression = {user, '_', 0},       %% 测试sex=0的用户
+%%     F = fun() ->
+%%             p1_mnesia:count_records(user, MatchExpression)
+%%         end,
+%%     mnesia:transaction(F).
+%%
+%% %% Internal APIs
+%% setup_db() ->
+%%     mnesia:stop(),
+%%     mnesia:delete_schema([node()]),
+%%     mnesia:create_schema([node()]),
+%%     mnesia:start(),
+%%     mnesia:create_table(user, [{attributes, record_info(fields, user)}]).
+%%
+%% db_filler(Count) ->
+%%     lists:foreach(fun(Item) ->
+%%		         Sex = (Item rem 2),
+%%                       Name = io_lib:format("user - ~p", [Item]),
+%%		         User = #user{name=Name, sex=Sex},
+%%                       F = fun() ->
+%%			         mnesia:write(User)
+%%                           end,
+%%		         mnesia:transaction(F)
+%%                   end, lists:seq(1, Count)).
+%%
+%%====================================================================
+
+%% Return the number of records matching a given match expression.
+%% This function is intended to be used inside a Mnesia transaction.
+%% The count has been written to use the fewest possible memory by
+%% getting the record by small increment and by using continuation.
+-define(BATCHSIZE, 100).
+count_records(Tab, MatchExpression) ->
+    %% the result contains list of [] for each match: We do not need
+    %% actual values as we only count the data.
+
+    %% select/4和select/1 用来获取有限的数量的结果, 
+    %% select(Tab, MatchSpec, NObjects, Lock) -> transaction abort | {[Object],Continuation} | '$end_of_table'
+    %% select(Continuation) -> transaction abort | {[Object],Continuation} | '$end_of_table'
+    %% 
+    %% MatchSpec格式: [{MatchExpression, Guard, [Result]}]
+    %% 我们不关心结果, 只计算数量, 所以Result = []
+    case mnesia:select(Tab, [{MatchExpression, [], [[]]}], ?BATCHSIZE, read) of
+	{Result,Cont} ->
+	    Count = length(Result),
+	    count_records_cont(Cont, Count);
+	'$end_of_table' ->
+	    0
+    end.
+
+%% Bug: 
+%% 下面是ejabberd中原来的实现, 在调用select/1的时候仍然返回{Result, Cout}, 
+%% 应为返回的Cout已经修改, 并不等于参数的Cont, 所以会引起{case_clause,...}错误
+%% 
+%% Fix:
+%% 将Cout改为CoutNew及可
+%% count_records_cont(Cont, Count) ->
+%%    case mnesia:select(Cont) of
+%%	{Result,Cont} ->
+%%	    NewCount = Count + length(Result),
+%%	    count_records_cont(Cont, NewCount);
+%%	'$end_of_table' ->
+%%	    Count
+%%    end.
+count_records_cont(Cont, Count) ->
+    case mnesia:select(Cont) of
+	{Result,ContNew} ->
+	    NewCount = Count + length(Result),
+	    count_records_cont(ContNew, NewCount);
+	'$end_of_table' ->
+	    Count
+    end.
+
+2. 测试代码:
+-module(p1_mnesia_test).
+-export([init/1, run1/0, run2/0]).
+
+-record(user, {name, sex}).
+
+%% 测试条件:
+%% 1. 创建一个Mnesia数据库, 创建一个user表
+%% 2. 插入Count条记录到数据库中, 一半男, 一半女
+init(Count) ->
+    setup_db(),
+    db_filler(Count).
+
+%% 匹配sex = 1
+run1() ->
+    MatchExpression = #user{sex = 1, _ = '_'},
+    F = fun() ->
+          p1_mnesia:count_records(user, MatchExpression)
+        end,
+    mnesia:transaction(F)  .
+
+%% 匹配sex = 0
+run2() ->
+    MatchExpression = {user, '_', 0},
+    F = fun() ->
+          p1_mnesia:count_records(user, MatchExpression)
+        end,
+    mnesia:transaction(F).
+    
+
+
+%% Internal APIs:
+
+setup_db() ->
+    mnesia:stop(),
+    mnesia:delete_schema([node()]),
+    mnesia:create_schema([node()]),
+    mnesia:start(),
+    mnesia:create_table(user, [{attributes, record_info(fields, user)}]).
+
+
+db_filler(Count) ->
+    lists:foreach(fun(Item) ->
+		      Sex = (Item rem 2),
+                      Name = io_lib:format("user - ~p", [Item]),
+		      User = #user{name=Name, sex=Sex},
+                      F = fun() ->
+			      mnesia:write(User)
+                          end,
+		      mnesia:transaction(F)
+                  end, lists:seq(1, Count)).

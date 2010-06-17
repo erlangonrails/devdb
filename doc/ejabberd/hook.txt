@@ -1,0 +1,144 @@
+$ejabberd_hooks.erl
+
+1. 提供了一种hooks的机制, 可以以hooks的方式按固定的顺序执行一些列的hooks函数.
+
+2. 内部创建了一个名字是hooks的ets表来存储数据, 是一个key/val形式的表, 存储的数据形式如下：
+   本质就是: 一个Hook和一个Host决定一个hook (Host默认是global).
+
+   {Hook:atom(), Host} -> [{Seq, Module, Function}]
+   {Hook:atom(), Host} -> [{Seq, Node, Module, Function }]
+
+   Hook是hook的名字, 可以是任意的atom(), Host在默认的情况下是global.
+   并提供了一些列的APIs接口来访问这个ets表格, add/delete数据到这个表格中.
+   (注意: Seq是函数的顺序, 会按照Seq的顺序执行这些hooks functions, 也就是内部的hooks
+   函数会按照Seq从小到大来排序)
+
+3. 提供了两种方式来执行这些hooks函数：
+   run和run_fold的方式, 这两种方式的不同就是是否关心函数的返回值,
+   run的方式不关心, run_fold的方式会把第一次函数调用的返回值最为参数传递给第二次调用的函数.
+   a. run的方式
+      run(Hook, Host, Args) -> ok
+      按照Seq的顺序依次执行hooks函数, 不关心函数的返回结果, 如果一个函数返回stop,
+      则hooks函数将不再继续执行.
+      本质上是调用apply(Module, Function, Args)
+
+   b. run_fold的方式
+      run_fold(Hook, Host, Val, Args) -> Val | stopped | NewVal
+      按照Seq的顺序依次执行hooks函数，传递给函数的参数是[Val | Args], 一次函数调用的结果
+      会作为下一次函数调用的参数传递[ Res | Args].
+      如果一个函数返回stop, 则hooks函数不再继续执行，返回stopped.
+      如果一个函数返回{stopped, NewVal}，则hooks函数不再继续执行，返回NewVal
+      本质上是调用apply(Module, Function, [Val | Args])
+
+4. 测试代码:
+-module(hook_test).
+-export([init/0,
+         run/0,
+	 run_hook_1/1,
+	 run_hook_2/1,
+	 run_hook_3/1,
+	 run_hook_4/1,
+	 run_fold_hook_1/1,
+	 run_fold_hook_2/1,
+	 run_fold_hook_3/1,
+	 run_fold_hook_4/1]).
+
+-define(RUN_HOOK, test_run_hook).
+-define(RUN_FOLD_HOOK, test_run_fold_hook).
+
+init() ->
+    load_config(),
+    ejabberd_hooks:start_link().
+
+%% 返回的结果:
+%% this is run_hook_1 with arg#"this is args for hook"
+%% this is run_hook_2 with arg#"this is args for hook"
+%% this is run_hook_3 with arg#"this is args for hook"
+%% this is run_hook_4 with arg#"this is args for hook"
+%% this is run_fold_hook_1 with arg#1
+%% this is run_fold_hook_2 with arg#2
+%% this is run_fold_hook_3 with arg#3
+%% this is run_fold_hook_4 with arg#4
+%% 5   --- 注意, 这是run_fold返回的结果
+run() ->
+    demo_run_hook(),
+    demo_run_fold_hook().
+
+%% Internal APIs:
+
+%% 加载ejabberd的配置文件
+load_config() ->
+    ejabberd_loglevel:set(5),    %% 发生错误的时候记录日志
+    stringprep_sup:start_link(),
+
+    %% 创建config, local_config, acl三张表
+    mnesia:stop(),
+    mnesia:delete_schema([node()]),
+    mnesia:create_schema([node()]),
+    mnesia:start(),
+
+    acl:start(),
+    ejabberd_config:start().
+
+%% 数据在ets-hooks表中的存储:
+%% key - {test_run_hook, global} 
+%% val - 看下面的查询结果
+%%
+%% ets:lookup(hooks, {test_run_hook, global}).
+%% [{{test_run_hook,global},
+%%   [{1,test,run_hook_1},
+%%    {2,test,run_hook_2},
+%%    {3,test,run_hook_3},
+%%    {4,test,run_hook_4}]}]
+demo_run_hook() ->
+    %% Setup hooks 
+    ejabberd_hooks:add(?RUN_HOOK, ?MODULE, run_hook_3, 3),
+    ejabberd_hooks:add(?RUN_HOOK, ?MODULE, run_hook_4, 4),
+    ejabberd_hooks:add(?RUN_HOOK, ?MODULE, run_hook_1, 1),
+    ejabberd_hooks:add(?RUN_HOOK, ?MODULE, run_hook_2, 2),
+
+    
+    %% Run hooks
+    ejabberd_hooks:run(?RUN_HOOK, ["this is args for hook"]). %% 注意, 参数传递方式, 必须传递list.
+
+%% ets:lookup(hooks, {test_run_fold_hook, global}).
+%% [{{test_run_fold_hook,global},
+%%  [{1,test,run_fold_hook_1},
+%%   {2,test,run_fold_hook_2},
+%%   {3,test,run_fold_hook_3},
+%%   {4,test,run_fold_hook_4}]}]
+demo_run_fold_hook() ->
+    %% Setup hooks 
+    ejabberd_hooks:add(?RUN_FOLD_HOOK, ?MODULE, run_fold_hook_3, 3),
+    ejabberd_hooks:add(?RUN_FOLD_HOOK, ?MODULE, run_fold_hook_4, 4),
+    ejabberd_hooks:add(?RUN_FOLD_HOOK, ?MODULE, run_fold_hook_1, 1),
+    ejabberd_hooks:add(?RUN_FOLD_HOOK, ?MODULE, run_fold_hook_2, 2),
+
+    
+    %% Run hooks
+    ejabberd_hooks:run_fold(?RUN_FOLD_HOOK, 1, []). %% 注意, 参数传递方式, 传递给第一个函数的是[Val | Args] = [1]
+
+
+%% Hook函数
+run_hook_1(Args) ->
+    io:format("this is run_hook_1 with arg#~p~n", [Args]).
+run_hook_2(Args) ->
+    io:format("this is run_hook_2 with arg#~p~n", [Args]).
+run_hook_3(Args) ->
+    io:format("this is run_hook_3 with arg#~p~n", [Args]).
+run_hook_4(Args) ->
+    io:format("this is run_hook_4 with arg#~p~n", [Args]).
+
+run_fold_hook_1(Args) ->
+    io:format("this is run_fold_hook_1 with arg#~p~n", [Args]),
+    Args + 1.
+run_fold_hook_2(Args) ->
+    io:format("this is run_fold_hook_2 with arg#~p~n", [Args]),
+    Args + 1.
+run_fold_hook_3(Args) ->
+    io:format("this is run_fold_hook_3 with arg#~p~n", [Args]),
+    Args + 1.
+run_fold_hook_4(Args) ->
+    io:format("this is run_fold_hook_4 with arg#~p~n", [Args]),
+    Args + 1.
+    
