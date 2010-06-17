@@ -1,0 +1,122 @@
+$ejabberd_listener.erl
+$ejabberd_socket.erl
+$ejabberd_receiver.erl
+
+四个模块组成了ejabberd的C2S的核心逻辑, IM客户端就是通过这个模块和ejabberd服务器进行交互,
+C -> S的所有数据都是发送到这个模块, S -> C的所有数据通过(ejabberd_c2s)发送给客户端, 这个模块
+并不涉及XMPP协议, 只是单纯的负责接收二进制的socket数据, 解析, 并负责发送数据到客户端.
+
+1. ejabberd_listener模块功能: ---> Listen & Accept
+   负责"创建", "监视"一系列的"网络端口监听进程", 这些网络端口监听进程功能单一, "只负责接收
+   客户端新进的连接", 每到一个新的连接, 交给一个特定的模块处理后, 自己继续监听.
+   例如:
+   c2s的监听进程接收了一个网络连接, 简单的调用
+   ejabberd_socket:start(ejabberd_c2s, gen_tcp, Socket, Opts)处理后, 自己继续监听.
+
+2. ejabberd_listener创建哪些"网络端口监听进程"? 监控树的结构?
+   <1> 创建的"网络端口监听进程"是根据配置文件决定的
+   例如:
+   下面这个配置文件定义了3个"端口监听进程", 分别是:
+   ejabberd_c2s, ejabberd_s2s_in, ejabberd_http
+
+   ejabberd.cfg
+   {listen,
+    [{5222, ejabberd_c2s, [{access, c2s},
+ 			   {shaper, c2s_shaper},
+			   {max_stanza_size, 65536}]},
+     {5269, ejabberd_s2s_in, [{shaper, s2s_shaper},
+			      {max_stanza_size, 131072}]},
+     {5280, ejabberd_http, [captcha,
+			    http_bind,
+			    http_poll,
+			    web_admin]}]}.
+
+   配置文件中每个"端口监听进程"的格式如下:
+   {Port:integer(), Module:atom(), Opts:list()}
+
+   <2> 模块启动之后, 监控树的结构是(分为两个部分):
+                           ejabberd_sup
+                     /          |          \
+     ejabberd_c2s_sup  ejabberd_s2s_in_sup  ejabberd_http_sup
+
+            ejabberd_sup
+                  |
+          ejabberd_listeners
+          /       |       \
+      <5222>   <5269>    <5280>
+       c2s     s2s_in     http
+
+    原理分析:
+    当ejabberd_listener模块启动之后, 会创建上面的监控树结构, 负责接收IM客户端连接
+    的是c2s这个子进程, 核心的逻辑实质上是: 
+    accpet -> do something -> accept -> do something -> accept ...
+    
+    核心代码:
+    ListenSocket = gen_tcp:listen(5222, ListenOpts),
+    {ok, Socket} = gen_tcp:accept(ListenSocket),
+    ejabberd_socket:start(ejabberd_c2s, gen_tcp, Socket, Opts),
+    {ok, Socket1} = gen_tcp:accept(ListenSocket),
+    ....
+
+3. ejabberd_socket模块功能概述:
+   <1> 该模块最核心的功能就是当有一个新进的socket连接到来之后, ejabberd_listener模块
+   都会调用该模块的ejabberd_socket:start(Module, SockMod, Socket, Opts)函数来启动
+   一对: c2s_receiver和ejabberd_c2s进程, 并把这"两个进程关联起来".
+
+   c2s_receiver接收原始的socket数据, 经过处理后转变成xml stanza, 发送给ejabberd_c2s
+   模块处理.
+
+   <2> ejabberd_socket:start/4做了哪些事情?
+   a. 会分别创建两个进程: ejabberd_receiver和ejabberd_c2s, 挂在各自的监控树下.
+      ejabberd_receiver_sup          ejabberd_c2s_sup
+               |                             |
+         c2s_receiver                  ejabberd_c2s
+   b. c2s_receiver是socket的controll process, socket接收到的数据都会发送到这个进程,
+      经过xml_stream的parser处理后发送给ejabberd_c2s.
+   c. c2s_receiver和ejabberd_c2s是"一对一的关系", 把c2s_receiver进程和它对应的
+      ejabberd_c2s进程关联起来. 
+ 
+4. ejabberd_receiver模块功能概述:
+   <1> 该模块是对应socket的control process, 负责接收socket发送过来的数据, 数据经过
+   xml parser处理后发送给对应的ejabberd_c2s, ejabberd_c2s负责对xml stanza进行处理.
+
+   <2> 这个模块通过process_data(Data, State)来处理数据, 这个函数可以处理两类数据:
+   a. erlang xml(不经过shaper处理, 也就是shaper不会涉及到这部分数据)
+   例如:{xmlelement, Name:string(), AttrList, ChildList},
+   经过包装成{xmlstreamelement, El}的形式直接发送给ejabberd_c2s.
+
+   b. 从socket接收到的数据(经过shaper处理)
+   经过xml parser处理后自动发送给ejabberd_c2s.
+
+   补充: 经过a/b两种方式发送给ejabberd_c2s的数据格式是一致的:
+   {xmlstreamstart, Name, Attrs}
+   {xmlstreamend, EndName}
+   {xmlstreamelement, NewEl}
+   {xmlstreamerror, Er
+   
+   <3> 该模块使用了shaper(流量控制):
+   原理是:
+   该模块使用{active, once}的socket模型, 每次接收到数据后, 都需要"重新激活"才能接收数据,
+   每次接收到数据, 更新shaper:
+   a. 如果需要pause, 则启动一个timer, 这个timer在pause millisecond后会发送一个
+      {timeout, TimerRef, active}事件到receiver进程, 我们收到这个事件后在重新激活
+      socket, 才可以继续接收数据.
+   b. 如果不需要pause, 直接重新激活socket, 等待接收数据.
+
+   <4> 性能优化:
+   对长时间没有收到消息的进程休眠, 进行GC, 使之占用最少的系统资源CPU & Memory.
+   详细分析:
+   该模块是一个gen_server, 每个函数的返回值都有一个timeout的事件, ?HIBERNATE_TIMEOUT.
+   如果经过了这个时间该receiver进程没有收到任何数据, 就会调用下面函数来休眠.
+   proc_lib:hibernate(gen_server, enter_loop, [?MODULE, [], State]).
+   这个函数的作用是:
+   a. 把正在调用的进程处于等待状态, 它的内存分配就会尽可能的少.假如进程不想在短时间内接
+      收任何数据了那么这是非常有用的.
+   b. 进程在有消息发送过来时被唤醒, 假如进程在消息队列里有任何消息, 进程也会被立即唤醒.
+   c. 他丢弃进程的调用栈之后进行垃圾回收, 在回收后, 所有活跃数据都在"一个连续的堆中". 这
+      个堆然后把空间压缩到刚好能容纳的了活跃数据的尺寸 (即使这个尺寸比进程的最小堆的还小).
+   d. 假如进程活跃数据的大小小于最小堆尺寸, 第一次垃圾回收也会在进程被唤醒后发生, 这样确
+      保堆尺寸会变到不小于最小堆尺寸
+
+
+

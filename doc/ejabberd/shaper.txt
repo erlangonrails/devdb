@@ -1,0 +1,114 @@
+$shaper.erl
+
+1. 模块说明:
+该模块负责流量控制, 也就是限定接收单位时间内从客户端发送来的数据.
+控制数据(incoming rate)的传输, 当一个连接超出了最大的速度限制,
+ejabberd会停止一段时间从这个socket读取数据, 当速度降到平均速度以下后, 再开始读取.
+
+例如ejabberd.cfg中shaper的配置如下, 单位是bytes/second
+{shaper, normal, {maxrate, 1000}}.
+{shaper, fast, {maxrate, 50000}}.
+ 
+
+2. 使用方式:
+Rate = shaper:new(normal).
+{Rate1, Pause1} = shaper:update(Rate, Size1),
+{Rate2, Pause2} = shaper:update(Rate1, Size2),
+...
+
+APIs:
+update(Rate, Size) -> Pause
+根据这段时间传输的数据, 更新Rate, 返回{NewRate, Pause}
+Size  - 是距离上次更新Rate所传输的数据量, 单位是bytes.
+Pause -> 0 不需要暂停
+      -> integer() 需要暂停的时间, 单位是millisecond.
+
+3. 该模块涉及的单位:
+毫秒  - microsecond  1/1000000
+微秒  - millisecond  1/1000
+兆秒  - megaseconds  1000000
+
+4. 测试例子:
+-module(shaper_test).
+-export([init/0, run/0]).
+
+%% 例如ejabberd.cfg中shaper的配置如下, 单位是bytes/second
+%% {shaper, normal, {maxrate, 1000}}.
+%% {shaper, fast, {maxrate, 50000}}.
+init() ->
+    load_config().
+
+
+%% 返回的结果:
+%% <1>
+%% sleep 1000 millisecond
+%% Rate1:{maxrate,1000,499.4346399875341,1273564774875778}, Pause:0
+%% sleep 0 millisecond
+%% <2>
+%%
+%% sleep 1000 millisecond
+%% Rate1:{maxrate,1000,999.9892935841937,1273564781540028}, Pause:5663
+%% sleep 5663 millisecond
+%%
+%% <3>
+%% sleep 1000 millisecond
+%% Rate1:{maxrate,1000,724.2829799111103,1273564782543201}, Pause:0
+%% sleep 0 millisecond
+%%
+%% <4>
+%% sleep 1000 millisecond
+%% Rate1:{maxrate,1000,999.8139548504106,1273564784503455}, Pause:959
+%% sleep 959 millisecond
+run() ->
+    Rate = shaper:new(normal),
+    %% <1> 1second传输了1000bytes, pause = 0
+    sleep(1000),
+    {Rate1, Pause1} = shaper:update(Rate, 1000),
+    io:format("Rate1:~p, Pause:~p~n", [Rate1, Pause1]),
+    sleep(Pause1),
+
+    %% <2> 1second传输了1000bytes, pause = 5666
+    sleep(1000),
+    {Rate2, Pause2} = shaper:update(Rate1, 10000),
+    io:format("Rate1:~p, Pause:~p~n", [Rate2, Pause2]),
+    sleep(Pause2),
+
+    %% <3> 1second传输了450bytes, pause = 0
+    sleep(1000),
+    {Rate3, Pause3} = shaper:update(Rate2, 450),
+    io:format("Rate1:~p, Pause:~p~n", [Rate3, Pause3]),
+    sleep(Pause3),
+
+    %% <4> 1second传输了2500bytes, pause = 959
+    sleep(1000),
+    {Rate4, Pause4} = shaper:update(Rate3, 2500),
+    io:format("Rate1:~p, Pause:~p~n", [Rate4, Pause4]),
+    sleep(Pause4).
+    
+    
+    
+    
+
+%% Internal APIs:
+
+%% 单位是millisecond
+sleep(Time) ->
+    io:format("sleep ~p millisecond~n", [Time]),
+    receive
+    after Time ->
+	    true
+    end.
+
+%% 加载ejabberd的配置文件
+load_config() ->
+    ejabberd_loglevel:set(5),    %% 发生错误的时候记录日志
+    stringprep_sup:start_link(),
+
+    %% 创建config, local_config, acl三张表
+    mnesia:stop(),
+    mnesia:delete_schema([node()]),
+    mnesia:create_schema([node()]),
+    mnesia:start(),
+
+    acl:start(),
+    ejabberd_config:start().
