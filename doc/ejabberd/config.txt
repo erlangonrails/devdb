@@ -1,0 +1,167 @@
+$ejabberd_config.erl
+$acl.erl
+
+1. 读取配置文件中的erlang term.
+   ejabberd.cfg存储的都是erlang term, 不同的term用点(.)分割,
+   使用file:consule(Filename)可以返回{ok, Terms}
+
+   例如:
+   f.txt:  {person, "kalle", 25}.
+           {person, "pelle", 30}.
+   file:consule(f.txt) -> {ok,[{person,"kalle",25},{person,"pelle",30}]}
+
+2. 规则:
+<1> ejabberd.cfg中的数据会分别写入下面三个mnesia表格: config, local_config, acl
+
+<2> 下面三个变量不写到表格中, 只是作为控制变量使用
+    override_global
+    override_local
+    override_acl
+
+<3> 只有ACL的内容会写入acl表, acl表存储的是Acl#acl{}记录.
+    -record(acl, {aclname, aclspec}).
+    Key =  {ACLName, Host}, 我们这里所有的Host都设置成global
+    Val =  AclSpec
+
+    例如, ejabberd.cfg内容如下:
+    {acl, admin, {user, "useradmin", "example.org"}}.
+    {acl, blocked, {user, "userblocked", "example.org"}}.
+    {acl, local, {user_regexp, ""}}.
+
+    我们会写入如下内容到acl表:
+    #acl{aclname = {admin, global}, aclspec = {user, "useradmin", "example.org"}}.
+    #acl{aclname = {block, global}, aclspec = {user, "userblocked", "example.org"}}.
+    #acl{aclname = {local, global}, aclspec = {user_regexp, ""}}.
+
+<4> 数据的存储位置:
+    a. ACL的数据存储在acl
+    b. access, shaper, hosts, language的数据存储在config
+    c. 其它所有的数据存储在local_config
+
+<5> 在写入config和local_config中的数据中, Key有几种特别的形式:
+    i.  access, shaper
+    ii. odbc_server, auth_method, modules,
+
+    a. access
+    Key = {access, RuleName, Host}, 我们这里所有的Host都设置成global
+    Value = Rules
+
+    例如, ejabberd.cfg内容如下:
+    {access, max_user_offline_messages, [{5000, admin}, {100, all}]}.
+    {access, local, [{allow, local}]}.
+
+    我们会写如下内容到config表:
+    #config{key = {access, max_user_offline_messages, global}, value = [{5000, admin}, {100, all}]}.
+    #config{key = {access, local, global}, value = [{allow, local}]}.
+
+    b. shaper 
+    Key = {shaper, Name, Host}, 我们这里所有的Host都设置成global
+    Value = Data 
+
+    例如, ejabberd.cfg内容如下:
+    {shaper, normal, {maxrate, 1000}}.
+    {shaper, fast, {maxrate, 50000}}.
+     
+    我们会写如下内容到config表:
+    #config{key = {shaper, normal, global}, value = {maxrate, 1000}}.
+    #config{key = {shaper, fast, global}, value = {maxrate, 50000}}.
+
+    c. odbc_server
+    Key = {odbc_server, Host}
+    Value = ODBC_server
+
+    例如, ejabberd.cfg内容如下:
+    {hosts, ["example.net", "example.com", "example.org"]}.
+    {odbc_server, {mysql, "server", "database", "username", "password"}}.
+   
+    我们会写如下三条记录到local_config表:
+    #local_config{key = {odbc_server, "example.net"}, value = {mysql, "server", "database", "username", "password"}}.
+    #local_config{key = {odbc_server, "example.com"}, value = {mysql, "server", "database", "username", "password"}}.
+    #local_config{key = {odbc_server, "example.org"}, value = {mysql, "server", "database", "username", "password"}}.
+
+    d. auth_method
+    Key = {auth_method, Host}
+    Value = Method
+
+    例如, ejabberd.cfg内容如下:
+    {hosts, ["example.net", "example.com", "example.org"]}.
+    {auth_method, odbc}.
+
+    我们会写如下三条记录到local_config表:
+    #local_config{key = {auth_method, "example.net"}, value = odbc}.
+    #local_config{key = {auth_method, "example.com"}, value = odbc}.
+    #local_config{key = {auth_method, "example.org"}, value = odbc}.
+
+    e. modules
+    Key = {modules, Host}
+    Value = Modules
+
+    例如, ejabberd.cfg内容如下:
+    {hosts, ["example.net", "example.com", "example.org"]}.
+
+    我们会写如下三条记录到local_config表:
+    #local_config{key = {modules, "example.net"}, value = Modules}.
+    #local_config{key = {modules, "example.com"}, value = Modules}.
+    #local_config{key = {modules, "example.org"}, value = Modules}.
+
+3. 依赖:
+   a. 在使用该模块前应该先调用acl:start()来创建acl表
+   b. 依赖stringprep模块来处理字符串
+
+4. ACL模块的测试代码:
+-module(acl_test).
+-export([init/0, run/0]).
+
+-define(TEST_JID,  {"liqiang", "example.org", ""}). %% JID
+-define(BLOCK_JID, {"userblocked", "example.org", ""}).    %% blocked jid
+
+init() ->
+    ejabberd_loglevel:set(5),    %% 发生错误的时候记录日志
+    stringprep_sup:start_link(),
+
+    %% 创建config, local_config, acl三张表
+    mnesia:stop(),
+    mnesia:delete_schema([node()]),
+    mnesia:create_schema([node()]),
+    mnesia:start(),
+
+    acl:start(),
+    ejabberd_config:start().
+
+%% 返回的结果:
+%% init acls# [{acl,{local,global},{user_regexp,[]}},
+%%             {acl,{blocked,global},{user,"userblocked","example.org"}},
+%%             {acl,{admin,global},{user,"useradmin","example.org"}}]
+%% {"liqiang","example.org",[]} matched admin: false
+%% new acls# [{acl,{local,global},{user_regexp,[]}},
+%%            {acl,{blocked,global},{user,"userblocked","example.org"}},
+%%            {acl,{admin,global},{user,"useradmin","example.org"}},
+%%            {acl,{admin,global},{user,"liqiang","example.org"}}]
+%% {"liqiang","example.org",[]} matched admin: true
+%% {"liqiang","example.org",[]} matched c2s rule: allow
+%% {"userblocked","example.org",[]} matched c2s rule: deny
+
+run() ->
+    %% 打印初始化之后acl中的所有数据, 也就是所有的acl列表.
+    ACLs = ejabberd_config:get_all(acl),
+    io:format("init acls# ~p~n", [ACLs]),
+
+    %% 测试TEST_JID是否在admin的acl中.
+    Matched = acl:match_acl(admin, ?TEST_JID, global),
+    io:format("~p matched admin: ~p~n", [?TEST_JID, Matched]),
+
+    %% 增加一条acl记录TEST_JID到admin acl中
+    %% {acl,{admin,global},{user,"liqiang","example.net"}}
+    acl:add(global, admin, {user, "liqiang", "example.org"}),
+    ACLsnew = ejabberd_config:get_all(acl),
+    io:format("new acls# ~p~n", [ACLsnew]),
+    
+    %% 测试TEST_JID是否在admin的acl中.
+    Matchednew = acl:match_acl(admin, ?TEST_JID, global),
+    io:format("~p matched admin: ~p~n", [?TEST_JID, Matchednew]),
+
+    Matchedc2s1 = acl:match_rule(global, c2s, ?TEST_JID),
+    Matchedc2s2 = acl:match_rule(global, c2s, ?BLOCK_JID),
+    io:format("~p matched c2s rule: ~p~n", [?TEST_JID, Matchedc2s1]),
+    io:format("~p matched c2s rule: ~p~n", [?BLOCK_JID, Matchedc2s2]).
+
