@@ -56,3 +56,43 @@ g. 如果treap不为空, 则返回{Key, Priority, Val}, 如果treap为空, 抛�
 h. 删除treap的根节点, 返回一个新的treap, 如果treap为空, 则抛出异常.
    delete_root(Treap).
 
+6. 测试代码：
+-module(treap_test).
+-export([init/0, run/0]).
+
+
+%% 构造一个treap
+init() ->
+    %% 构造一个空的treap.
+    T = treap:empty(),
+
+    %% 插入数据
+    T1 = treap:insert("key10", 5, "val10", T),
+    T2 = treap:insert("key8", 4, "val8", T1),
+    T3 = treap:insert("key6", 7, "val6", T2),
+    T4 = treap:insert("key12", 23, "val12", T3),
+    T5 = treap:insert("key34", 10, "val34", T4),
+    T6 = treap:insert("key2", 3, "val2", T5),
+    T7 = treap:insert("key9", 6, "val9", T6),
+    T7.
+
+
+%% 返回的结果
+%% root: {"key12",23,"val12"}
+%% key9: {ok,6,"val9"}
+%% key9: error
+run() ->
+    T = init(),
+    %% 根节点
+    Res0 = treap:get_root(T),
+    io:format("root: ~p~n", [Res0]),
+
+    %% 查找数据
+    Res1 = treap:lookup("key9", T),
+    io:format("key9: ~p~n", [Res1]),
+
+    %% 删除数据
+    T1 = treap:delete("key9", T),
+    Res2 = treap:lookup("key9", T1),
+    io:format("key9: ~p~n", [Res2]).
+

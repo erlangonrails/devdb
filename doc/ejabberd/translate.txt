@@ -30,3 +30,41 @@ $translate.erl
       translate:translate("zh", "Access Configuration") -> "访问配置"
    2) 如果是transactions表中没有存在的数据, 返回Msg
       translate:translate("zh", "Access Configuration another") -> "Access Configuration another"
+
+4. 测试代码:
+-module(translate_test).
+-export([init/0, run/0]).
+
+-define(KEY1, "Access Configuration").
+-define(KEY2, "Access Configuration-1").
+
+init() ->
+    load_config(),
+    translate:start().
+
+
+%% 测试结果:
+%% key1:"Access Configuration", val1:[232,174,191,233,151,174,233,133,141,231,189,174]
+%% key2:"Access Configuration-1", val2:"Access Configuration-1"
+run() ->
+    Val1 = translate:translate("zh", ?KEY1),
+    Val2 = translate:translate("zh", ?KEY2),
+    io:format("key1:~p, val1:~p~n", [?KEY1, Val1]),
+    io:format("key2:~p, val2:~p~n", [?KEY2, Val2]).
+    
+
+
+%% Internal APIs:
+
+load_config() ->
+    ejabberd_loglevel:set(5),    %% 发生错误的时候记录日志
+    stringprep_sup:start_link(),
+
+    %% 创建config, local_config, acl三张表
+    mnesia:stop(),
+    mnesia:delete_schema([node()]),
+    mnesia:create_schema([node()]),
+    mnesia:start(),
+
+    acl:start(),
+    ejabberd_config:start().

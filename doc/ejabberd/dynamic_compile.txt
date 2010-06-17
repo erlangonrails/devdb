@@ -20,3 +20,29 @@ $dynamic_compile.erl
        在ejabberd的ejabberd_loglevel模块使用了这种技术, 当我们每次调用
        ejabberd_loglevel:set(Level)重新设置一个loglevel的时候, 都会根据新设置的
        level动态的"重新生成一个ejabberd_logger模块"
+
+2. 测试代码:
+-module(dynamic_compile_test).
+-export([init/0, run/0]).
+
+
+%% 测试dynamic_compile的使用:
+%% Usage:
+%% dynamic_compile_test:init().
+%% dynamic_compile_test:run().  - 调用动态生成的dynamicmod的方法.
+
+dynamicmod() ->
+    "-module(dynamicmod).
+     -export([test/0]).
+     test() ->
+         io:format(\"this is dynamicmod demo~n\", []).
+    ".
+
+
+init() ->
+    %% 演示dynamic_compile模块的使用方式	
+    {dynamicmod, Binary} = dynamic_compile:from_string(dynamicmod()),
+    code:load_binary(dynamicmod, [], Binary).
+
+run() ->
+    dynamicmod:test().
