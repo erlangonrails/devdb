@@ -1,0 +1,257 @@
+交互流程:
+client 跟踪ring的状况，收到一个请求后，获取对应的coordinator，然后发送请求
+: gen_server:call({e2d_server, node}, {get, xx, xx}).
+
+收到请求后，判断自身是否为coordinator:
+如果是,则交由e2d_coordinator模块处理，其向preference list中节点发送请求:gen_server:call({e2d_node, Node}, request)
+如果不是则获取coordinator，抓发消息gen_server:call({e2d_server, node}, request)
+不阻塞.
+
+
+//
+e2d_membership
+e2d_node
+e2d_server
+e2d_coordinator
+e2d_config
+e2d_store
+
+添加
+e2d_nodes_sup
+一个gen_event用来处理节点的各种状态，某个节点失效时，
+
+节点进入系统时，会进行数据的同步，包括从其他节点获取数据和提示其他节点删除某些数据。从而完成系统的接入。
+
+任务：
+coordinator的完成 (√)
+日志的添加(√)
+数据存储模块，采用mnesia(数据的添加，删除，更新）(√)
+merkle tree集成，数据同步，数据hinted handoff(√)
+系统集成，编写app
+dialyzer分析单元测试
+manager模块，配置的设置，生成
+client模块，http接口，请求处理
+虚拟节点
+系统震荡处理，节点大规模出错处理
+
+
+节点加入步骤：
+new Node                 Node in e2dynamo system
+-------------------------------------------------
+(init)get config
+(connect)connect_node             nodeup  msg
+(sync)sync data                   newnode msg
+(work)
+........                          ........
+(exit)
+
+
+节点自身状态：
+join    加入网络
+sync    同步数据
+work    工作状态
+exit    退出
+
+e2d_hash保存节点状态信息：
+内部节点包含多个状态
+work    正常工作状态
+transient_fail 临时故障
+permanet_fail 永久故障
+
+
+-----------------------------------------------------
+一个节点包含两种bucket：
+incharge buckets，是其在consistent hashing ring中备份的其前一个key区间对应的buckets
+replica buckets，是其备份的前N－1个节点的incharge buckets
+
+
+e2d_node 获取configure,设置cookie，设置所有的配信信息，获取system中的nodes
+node开始连接ndoes
+连接节点成功后，准备同步数据，首先从第一个successor获取incharge buckets,并进行切分。
+随后从这个successor获取replica buckets进行保存,成功后，新节点就拥有了其负责的数据，
+随后，通知N个successor后继节点删除多余的数据
+节点加入网络成功
+获取root
+
+predecessor（前驱）
+
+e2d_comm 负责和其他节点进行交互
+e2d_comm:request(Node, Req)
+
+e2d_sync 同步数据
+e2d_sync:update_bucket(Node, B)
+
+e2d_membership负责维护整个网络，保存节点的状态，用来增加删除节点。
+临时错误的节点
+永久错误的节点
+
+
+------------------------------------------------------
+启动获取configure，设置cookie
+
+-------------------------------------------------------
+数据同步：
+
+一般硬盘大小为160G，加上N=3备份，则实际大小为50G，如果系统中有128个节点，则系统的总容量为
+128 * 64G = 8T
+每个节点负责8G数据，1024个节点既为8T
+
+1，获取merkle tree root值
+2，如果相同，则同步完成，否则获取整个merkle tree（注意merkle tree的大小有限制）
+3，找出数据不同的key
+4，获取对应数据
+5，bucket同步完成
+
+假设bucket中拥有1M个key，则对应的merkle tree数据项为2M - 1，则merkle tree的大小为
+2M * 20 = 40M左右(40M)
+
+e2d_store.erl模块中包含bucket的merkle tree信息。
+节点启动的时候，通过bucket中数据构建merkle tree
+每个bucket对应一个tree信息。
+节点退出时，merkle tree信息不保存。
+
+每个节点负责的buckets list
+每个节点merkle tree信息 merkle {bucket, merkle}
+
+e2d_store_handler
+每个节点保存的数据data {key, data} -> 通过一个具体的数据存储模块进行
+
+-----------------------------------------------------------
+关于merkle tree
+因为merkle tree的构建更新比较耗时，因此进行put操作时，并不进行merkle tree更新。
+只有当收到用户的获取merkle tree相关信息时，才进行更新，采用的是lazy的形式。
+
+收到获取merkle tree信息：get_merkle, get_merkle_root
+节点启动时根据数据构建merkle tree。
+
+
+------------------------------------------------------------
+关于系统级别的故障，错误约定：
+不能获取config 信息，exit(econfig)
+启动时，不能连接超过3个节点，退出exit(enodes)
+同步数据时，节点出错，返回错误信息
+
+------------------------------------------------------------
+系统震荡处理，节点大规模出错处理
+
+节点C属于临时错误时，数据可以存储在D上，D启动一个监控线程，检测C的恢复，
+如果C恢复，则数据发送给D。
+
+如果等待一定时间T，节点D没有恢复，则数据转存到D的永久存储。
+此后，节点C如果恢复，其作为一个新加入节点对待
+
+
+------------------------------------------------------------
+设置N=3,R=W=2
+启动流程
+启动3个物理节点，Ubuntu A，sunos B和windows C
+节点A启动，节点列表只有其自身node_a
+节点B启动，节点列表中包含node_a, node_b
+    节点B连接节点A，进行数据同步，同步后，加入系统
+
+节点C启动，节点列表包含数据node_a, node_b, node_c，
+    节点C连接节点A, B，进行数据同步。
+同步后，加入系统。
+
+
+
+------------------------------------------------------------
+client 为一个app
+其采用mochiweb构建
+API based HTTP
+GET
+request
+GET /key_id HTTP/1.0
+Date: Thu, 17 Aug 2006 05:39:28 +0000GM
+
+Here is the server's response:
+
+HTTP/1.1 200 OK
+Date: Thu, 17 Aug 2006 05:39:28 +0000GMT
+Content-Type: application/json
+Connection: close
+
+{"ok" : true,
+ "value" : "023412342134090824901238490238409213840291389082342093"
+}
+
+如果发生冲突，则返回为
+HTTP/1.1 200 OK
+Date: Thu, 17 Aug 2006 05:39:28 +0000GMT
+Content-Type: application/json
+Connection: close
+
+{"ok" : false,
+ "value" :
+ [
+  {
+   "context" : [{"node1":2}, {"node2":4}],
+   "value" : "12342379078098080184231048230"
+  },
+  {
+   "context" : [{"node1":1}, {"node3":4}],
+   "value" : "1234237907809808018423saf1048230"
+  }
+ ]
+}
+
+(参考http://en.wikipedia.org/wiki/Internet_media_type)
+
+PUT (POST):
+request
+PUT /key_id HTTP/1.0
+Content-Length: 1024
+Date: Thu, 17 Aug 2006 05:39:28 +0000GMT
+Content-Type: application/json
+
+{
+ "context":"",
+ "value":"2342304898908912348902834902384908349012349923489233
+1234213421341234212121212121212121212121212121212121
+1241234234333333333333333333333333333333333333333331"
+}
+
+here is the server's response
+如果操作成功：
+HTTP/1.1 201 OK
+Date: Thu, 17 Aug 2006 05:39:28 +0000GMT
+Content-Type: application/json
+Connection: close
+
+{"ok" : true}
+
+如果失败：
+HTTP/1.1 201 OK
+Date: Thu, 17 Aug 2006 05:39:28 +0000GMT
+Content-Type: application/json
+Connection: close
+
+{"error" :
+ {
+        "info" : "error msg",
+        "reason" : ""
+ }
+}
+
+可以上传附件作为数据体
+PUT /key_id HTTP/1.0
+Content-Length: 245
+Content-Type: image/jpeg
+
+<JPEG data>
+
+
+DELETE
+删除一个数据
+DELETE /key_id HTTP/1.0
+Date: Thu, 17 Aug 2006 05:39:28 +0000GMT
+
+
+服务器返回：
+HTTP/1.1 200 OK
+Date: Thu, 17 Aug 2006 05:39:28 +0000GMT
+Content-Type: application/json
+Connection: close
+
+{"ok":true}
+

@@ -1,0 +1,34 @@
+{'src/*',
+    [debug_info,
+    {i,"include"},
+    {outdir,"ebin"}
+    ]
+}.
+
+{'src/mochiweb/*',
+    [debug_info,
+    {i,"include"},
+    {outdir,"ebin"}
+    ]
+}.
+
+{'src/node/*',
+    [debug_info,
+    {i,"include"},
+    {outdir,"ebin"}
+    ]
+}.
+
+{'src/manager/*',
+    [debug_info,
+    {i,"include"},
+    {outdir,"ebin"}
+    ]
+}.
+
+{'test/src/*',
+    [debug_info,
+    {i,"include"},
+    {outdir,"ebin"}
+    ]
+}.

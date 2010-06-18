@@ -1,0 +1,21 @@
+thanks for browse this project!
+e2dynamo is an amazon's dynamo simliar distributed key-value storage system.
+
+It's still in coding stage, please wait a moment, We will be release the first version!
+thank you! If you have any suggestion, please contact with me! litaocheng@gmail.com
+
+TODO contains the todo list we'l do in future
+
+The directories layout is described below:
+---
+  |--doc (some document about the tech of e2dynamo)
+  |--ebin (contains compiled erlang code)
+  |--include (the include files)
+  |--manager (the web interface to monitor and manager the servers)
+  |--priv (some specific files used by e2dynamo)
+  |--src (contains the source codes)
+  |   |--clientlib
+  |   |--mochiweb
+  |   |--node
+  |--support (included make file)
+  |--conf (some config files)
