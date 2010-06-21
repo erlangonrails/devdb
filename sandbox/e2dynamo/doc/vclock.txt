@@ -1,0 +1,48 @@
+该模块实现了Vector Clock
+
+1. 这个模块实现了Vector Clock, 用来在多个节点间进行数据的同步.
+
+2. 两个数据结构:
+<1> vc_entry是一个包含三个元素的record: node, counter, stamp
+    node是节点的名称, 也是vc_entry的标识.
+    counter是版本号, 数字越大, 本本越新
+    stamp是节点最新的访问时间, 也就是最新版本更新的时间.
+<2> vclock是vc_entry的列表
+
+3. APIs:
+<1> new() -> vclock()
+    创建一个新的vector clock
+
+<2> increase(Node :: vc_node(), VClock:: vclock()) -> vclock()
+    增加一个节点上的counter, 也就是更新一个节点上的版本.
+
+<3> descends(Va :: vclock(), Vb :: vclock()) -> 'true' | 'false' | 'divergent'
+    判断Va是否是Vb的后代, 也就是Va是否是Vb的后续版本.
+    如果是返回true.
+    如果不是返回false.
+    如果vector clock不能syntactically reconciled, 返回divergent.
+    (在这种情况下, 表示Vb中有的vc_entry在Va中并不存在)
+
+<4> merge(Va :: vclock(), Vb :: vclock()) -> vclock().
+    merge(Vs :: [vclock()]) -> vclock()
+    合并两个或多个vclock, 返回一个新的vclock.
+    合并规则和extend/2类似, 针对相同的vc_entry, 会自动选择最新版本进行合并.
+
+<5> extend(Entry :: vc_entry(), VClock :: vclock()) -> vclock()
+    增加一个新的vc_entry到vclock中, 返回新的vclock.
+    如果VClock中已经存在这个vc_entry, 在会比较VClock中的vc_entry和这个新增
+    的Entry的版本, 合并到最新版本.
+
+<6> size(V :: vclock()) -> non_neg_integer()
+    返回vclock中vc_entry的数量.
+
+<7> get_counter(Node :: vc_node(), V :: vclock()) -> {'value', pos_integer()} | 'false'
+    返回一个vclock中特定的vc_entry的版本信息(counter).
+
+<8> get_stamp(Node :: vc_node(), V :: vclock()) -> {'value', pos_integer()} | 'false'
+    返回一个vclock中特定的vc_entry的最后访问时间.
+
+4. 例子:
+   参考vclock模块中的test_/0中的使用方式.
+
+
