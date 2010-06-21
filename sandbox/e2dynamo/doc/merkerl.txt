@@ -1,0 +1,68 @@
+该模块实现了Merkle Tree
+
+1. 这个模块主要用来同步(sync)两个相似的K/V存储系统, 典型的应用是当一对或者多个
+   K/V存储系统的节点可以独立的修改(插入一个新的k/v pair或者修改已经存在的key对应的
+   value, 对应的API是insert/2), 任何时候, 一个节点可以发送representation of its 
+   tree到另外一个节点, 收到信息的节点可以调用diff/2来比较两颗树的不同, 也就是哪些k/v 
+   objects不同, 有了这些信息, 不同的节点直接就可以进行数据的同步, 保证节点间的数据最终一致,
+   如果k/v objects包含了版本的信息, 就更容易进行数据的同步了.
+   
+2. 该模块依赖crypto这个模块, 使用之前确保这个模块已经启动了.
+
+3. 该模块的本质是通过K/V objects的'Key'和'Value对应的hash'值构成的一个Merkle tree来
+   标识一个K/V系统的状态.
+
+4. 数据结构
+   userdata()
+   是一个objects的key或者'name', 用来唯一标识一个object. 即使object的value变化了,
+   这个key也应该保持不变.
+
+   hash()
+   用来反映object对应的value的变化, 如果value变化了, 对应的hash()也应该变化.
+
+5. APIs
+<1> insert(X :: {userdata(), hash()},T :: tree()) -> tree()
+    插入一条数据X到T中, 或者修改T中的object X
+  
+    userdata是object的key或者是'name', 用来标识一个object,可以是任意的term(), 
+    内部使用sha1(term_to_binary(userdata))来处理.
+
+    hash是userdata对应的value的哈希值, 只有当两个key对应的value相同的时候,
+    它们的哈希值才能相同.
+
+    补充: 可以通过传递T = undefined来创建一个新的tree.
+
+<2> build_tree([{userdata(), hash()}]) -> tree()
+    从一个K/V pair的列表来创建一个Merkle tree.
+
+<3> delete(userdata(), tree()) -> tree()
+    从一个Merkle tree中删除一个object.
+
+<4> diff(tree(), tree()) -> [userdata()] | []
+    比较两个tree中有那些objects不同, 并返回这些不同的objects的key的列表,
+    如果两颗树相同, 返回空列表.
+
+    differ的含义是:
+    一个object只存在于一颗tree中; 或者一个object存在于不同tree中, 但是它们的
+    hash()值不同.
+
+    注意:
+    两个tree之间不同的信息只有他们的key列表, 没有其它的附加信息, 我们可以使用
+    vector-clock来做版本管理.
+
+<5> allkeys(tree()) -> [userdata()]
+    返回一个Merkle tree的所有的key列表.
+
+<6> root(tree()) -> hash()
+    返回一颗Merkle tree的root节点的hash(), 通过比较这个hash(),
+    可以确定两个Merkle tree是否相同.
+
+<7> sha(term()) -> 
+    返回一个term()对应的sha值.
+
+6. 例子
+   参考merkerl模块中的test_merkle/0中的使用方式.
+
+
+
+
