@@ -1,11 +1,6 @@
 %%% vector clock
 %%% reference : http://en.wikipedia.org/wiki/Vector_Clock
-%%% @author litaocheng@gmail.com
-%%% @copyright toquick.com
-
 -module(vclock).
--author('litaocheng@gmail.com').
--vsn('0.2').
 -include("vclock.hrl").
 
 -export([new/0, increase/2, descends/2, merge/2, merge/1, extend/2]).
