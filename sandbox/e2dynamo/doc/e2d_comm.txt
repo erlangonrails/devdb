@@ -1,0 +1,16 @@
+e2d_comm
+
+1. 该模块主要负责各个节点之间的通讯, 基于erlang的分布式机制.
+
+2. APIs:
+<1> request(Node :: atom(), Req :: any()) -> {'error', atom()} | {'ok', any()}
+    向一个特定的erlang节点发送一个请求Req, 并返回处理结果.
+
+    实质上, 每个e2dynamo节点上都有一个名字为e2d_server的local process, 是一个
+    gen_server. request/2是通过调用:
+    gen_server:call({e2d_server, Node}, {node_req, Req})
+    来把这个Req请求发送到特定节点的e2d_server进程上进行处理.
+
+    gen_server:call(ServerRef, Request) -> Reply
+    ServerRef = Name | {Name,Node} | {global,GlobalName} | pid()
+    我们使用{Name, Node}这种形式的ServerRef

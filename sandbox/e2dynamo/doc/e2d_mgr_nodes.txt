@@ -1,0 +1,68 @@
+e2d_mgr_nodes模块
+
+1. 该模块用来管理一个node的列表.
+
+2. 数据结构, node_info, 一个node是一个三元组, id, name和ip
+   %% the node info in the manager
+   -record(node_info, {
+       id = 0 :: non_neg_integer(),
+       name = '' :: atom(),
+       ip = {0, 0, 0, 0} :: ip_address()
+   }).
+
+3. 该模块是一个gen_server, 其中state就是node_info的列表, Key是id.
+   我们可以插入node到这个列表中, 也可以根据node的ip地址进行搜索.
+
+   add
+   当新增一个node的时候, 我们实质上是调用下面的API为State增加一个新的数据.
+   lists:keystore(Id, #node_info.id, State, Node) -> NewState
+
+   search
+   当搜索一个node的时候, 我们实质上是调用下面的API在State中根据IP进行搜索.
+   lists:keysearch(IP, #node_info.ip, State)
+
+4. APIs:
+<1> add_node(Node :: #node_info{}) -> ok
+    add_node(Id :: integer(), Name :: atom(), Ip :: tuple()) -> ok
+    增加一个node节点.
+
+<2> get_node(Ip :: tuple() | list()) -> false | #node_info{}
+    根据Ip搜索一个node.
+
+<3> get_nodes() -> [#node_info{}] | [] 
+    返回node的列表
+
+<4> exclude_node({FieldName :: atom(), Value :: any()}, Nodes :: [#node_info()]) -> [#node_info{}]
+    删除Nodes中(第一个)FileName为Value的项目, 返回新的node列表.
+
+    例如:
+    Nodes0 = e2d_mgr_nodes:get_nodes(),
+    Nodes = e2d_mgr_nodes:exclue_node({name, Name}, Nodes0),
+
+
+    注意: 这个函数的实现技巧, 具有通用性.   
+
+5. 补充, 用到的lists相关的APIs:
+<1> lists:keystore(Key, N, TupleList, NewTuple) -> NewTupleList
+    在TupleList中查找第一个满足"第N个元素为Key的tuple", 如果找到, 用NewTuple替换它, 返回
+    一个新的TupleList; 如果没找到, 则把NewTuple添加在TupleList的末尾, 返回一个新的TupleList.
+
+<2> lists:keysearch(Key, N, TupleList) -> {value, Tuple} | false
+    在TupleList中查找, 如果找到满足"第N个元素为Key的tuple", 则返回这个tuple, 否则返回false.
+
+<3> lists:takewhile(Pred, List) -> PreList
+    这个函数返回List最大的前缀PreList, 其中所有的元素都满足Pred(Item) -> true, 也就是
+    PreList里面所有的元素都满足Pred(Item) -> true.
+
+    例如:
+    take(Lists, Char) ->
+    lists:takewhile(fun(F) when F =:= Char -> false;
+                       (_F) -> true
+                    end, Lists).
+
+    test:take("thisis3abc", $3) -> "thisis"
+    test:take("th5isis5abc", $5) -> "th"
+
+<4> lists:keytake(Key, N, TupleList) -> {value, Tuple, NewTupleList} | false
+    在TupleList中查找第一个满足"第N个元素为Key的tuple", 如果找到, 返回{value, Tuple, NewTupleList},
+    NewTupleList中找到的tuple已经被移除; 如果找不到返回false.

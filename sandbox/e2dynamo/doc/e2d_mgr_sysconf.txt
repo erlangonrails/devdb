@@ -1,0 +1,20 @@
+e2d_mgr_sysconf
+
+1. 读取配置文件的一个模块, 配置文件的默认名字是: e2d_manager.conf
+
+2. APIs:
+<1> start_link() -> {ok,Pid} | ignore | {error,Error}
+    启动该模块, 会读取e2d_manager.conf中的内容, 里面的内容实质上是一个
+    proplist, 将这个proplist作为gen_server的state进行传递.
+
+    我们约定所有的key都是atom().
+
+    启动该模块.
+
+<2> get(Par :: atom(), Def :: any()) -> any().
+    get(Par :: [atom()] | atom()) -> [any() | 'undefined'] | any() | 'undefined'.
+    获取Key对应的Val, 可以一次获取多个Key对应的Val.
+
+<3> set(Key :: atom(), Val :: any()) -> ok
+    set(KVs :: [atom(), any()]) -> ok
+    插入一对数据, 可以一次插入多组K/V数据.
