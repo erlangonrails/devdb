@@ -1,0 +1,24 @@
+记录当前登录用户的IP模块
+
+
+1. 增加了一个mysql表youbao_online_ip来存储用户当前的IP数据,
+这个表在用户每次用户login/logout的时候都会更新.
+
+state表示用户当前的状态: 0表示logout, 1表示login
+
+CREATE TABLE youbao_online_ip (
+    username varchar(250) PRIMARY KEY,
+    ip text NOT NULL,
+    state character(1) NOT NULL
+) CHARACTER SET utf8;
+
+例如:
+mysql> select * from youbao_online_ip;
++----------+-----------------+-------+
+| username | ip              | state |
++----------+-----------------+-------+
+| user1    | 127.0.0.1:25339 | 0     |
+| user2    | 127.0.0.1:7225  | 1     |
+| user3    | 127.0.0.1:15987 | 0     |
++----------+-----------------+-------+
+

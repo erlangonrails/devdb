@@ -1,0 +1,45 @@
+用户在线升级模块(统计在线时间)
+
+增加了两个表存储这部分信息: 
+youbao_onlinetime: 在线总时间的统计, 单位是分钟.
+youbao_session_log: 每次用户登录的session的统计, 用户登录的原始数据.
+这个两个表当用户logout的时候会更新, youbao_onlinetime时间进行累加; youbao_session_log
+增加一条新的session记录.
+
+CREATE TABLE youbao_onlinetime (
+    username varchar(250) PRIMARY KEY,
+    onlinetime text NOT NULL
+) CHARACTER SET utf8;
+
+CREATE TABLE youbao_session_log (
+    sid varchar(250) PRIMARY KEY,
+    username varchar(250),
+    ip text NOT NULL,
+    logintime text NOT NULL,
+    logouttime text
+) CHARACTER SET utf8;
+
+例如:
+mysql> select * from youbao_onlinetime;
++----------+------------+
+| username | onlinetime |
++----------+------------+
+| user1    | 0          |
+| user2    | 0          |
+| user3    | 4          |
++----------+------------+
+3 rows in set (0.00 sec)
+
+mysql> select * from youbao_session_log;
++-----------------------+----------+-----------------+--------------------+--------------------+
+| sid                   | username | ip              | logintime          | logouttime         |
++-----------------------+----------+-----------------+--------------------+--------------------+
+| 2010622154849dmtynipx | user1    | 127.0.0.1:14826 | 2010-6-22 15:48:49 | 2010-6-22 15:49:4  |
+| 2010622155341dmtynipx | user1    | 127.0.0.1:25339 | 2010-6-22 15:53:41 | 2010-6-22 15:53:44 |
+| 2010622155546dmtynipx | user3    | 127.0.0.1:15987 | 2010-6-22 15:55:46 | 2010-6-22 16:0:12  |
+| 201062216438jee5xhi1  | user2    | 127.0.0.1:32357 | 2010-6-22 16:4:38  | 2010-6-22 16:4:45  |
+| 201062216514hmiu96ta  | user2    | 127.0.0.1:7225  | 2010-6-22 16:5:14  | 2010-6-22 16:5:16  |
++-----------------------+----------+-----------------+--------------------+--------------------+
+5 rows in set (0.00 sec)
+
+
