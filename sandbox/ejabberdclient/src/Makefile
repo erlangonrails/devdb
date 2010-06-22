@@ -1,4 +1,4 @@
-INCLUDE_DIRS := ../include 
+INCLUDE_DIRS := ../include ../deps/exmpp-0.9.3/include
 EBIN_DIRS := ../ebin ../deps/exmpp-0.9.3/ebin
 
 EBIN_DIR := ../ebin

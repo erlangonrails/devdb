@@ -41,7 +41,7 @@ login(Username, Password, VHost, Server, Port) ->
     {ok, _StreamId} = exmpp_session:connect_TCP(MySession, Server, Port),
     try exmpp_session:login(MySession) of
 	_Any ->
-	    Packet = exmpp_presence:set_status(exmpp_presence:available(), "xmpptools first presence"),
+	    Packet = exmpp_presence:set_status(exmpp_presence:available(), "ejabberdclient first presence"),
 	    exmpp_session:send_packet(MySession, Packet),
 	    ?PRINT("user: ~p login success ~n", [Username]),
 	    MySession
