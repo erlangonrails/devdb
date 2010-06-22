@@ -1,0 +1,20 @@
+添加好友的附加消息
+
+
+C1要添加C2为好友
+C1 = user1@91youbao.com
+C2 = user2@91youbao.com
+
+C1 -> S 发送添加好朋友请求
+<presence type='subscribe' to ='user2@91youbao.com'>
+  <status>添加好友的附加消息</status>
+</presence>
+
+
+S -> C2 接收到的添加好友请求
+<presence xmlns="jabber:client" 
+  from="user1@91youbao.com" to="user2@91youbao.com" type="subscribe">
+  <status>添加好友的附加消息</status>
+</presence>
+
+这些附加消息在ejabberd是存储在rosterusers表的askmessage字段.
