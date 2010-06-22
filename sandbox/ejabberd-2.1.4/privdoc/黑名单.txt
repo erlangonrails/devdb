@@ -1,0 +1,36 @@
+youbao黑名单的原理
+
+我们仍然使用XEP-0016来实现隐私列表的处理, 在新用户注册的时候通过写入默认的数据到DB, 帮助
+用户建立一个默认的隐私列表, 并让该隐私列表'生效', 这样用户可以直接使用而无须走XMPP协议去额
+外设置.
+
+1. 在用户注册的时候, 需要修改三个表:
+privacy_default_list
+privacy_list
+privacy_list_data
+
+对应的SQL语句:
+a. insert into privacy_default_list values('username', 'youbao-public')
+b. insert into privacy_list (username, name) values('username', 'youbao-public')
+c. insert into privacy_list_data (id, t, value, action, ord, match_all, match_iq, 
+     match_message, match_presence_in, match_presence_out) 
+     values ('ID', 'g', '黑名单', 'd', '1','1','0','0','0','0')
+   注意: ID是b语句执行后返回的自增ID.
+
+上面注册的时候插入的数据, 相当于帮助客户端自动做了如下处理:
+a. C -> S 设置一个隐私列表(youbao-public), 并添加'黑名单'这个组到隐私列表中
+<iq type='set' id='id1'>
+  <query xmlns='jabber:iq:privacy'>
+    <list name='youbao-public'>
+      <item type='group' value='黑名单' action='deny' order='1'/>
+    </list>
+  </query>
+</iq>
+
+b. C -> S 设置这个youbao-public的隐私组为默认组(使它生效), 这样用户添加
+到roster的'黑名单'中的联系人会屏蔽通讯.
+<iq type='get' id='id2'>" ++
+  <query xmlns='jabber:iq:privacy'>
+    <list name='youbao-public'/>
+  </query>
+</iq>
