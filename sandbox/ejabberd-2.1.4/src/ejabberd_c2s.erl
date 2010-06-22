@@ -96,7 +96,9 @@
 		conn = unknown,
 		auth_module = unknown,
 		ip,
-		lang}).
+		lang,
+	        logintime,
+                logouttime}).
 
 %-define(DBGFSM, true).
 
@@ -193,6 +195,7 @@ init([{SockMod, Socket}, Opts]) ->
 		     end, Opts),
     TLSOpts = [verify_none | TLSOpts1],
     IP = peerip(SockMod, Socket),
+    LoginTime = calendar:local_time(),
     %% Check if IP is blacklisted:
     case is_ip_blacklisted(IP) of
 	true ->
@@ -220,7 +223,8 @@ init([{SockMod, Socket}, Opts]) ->
 					 streamid       = new_id(),
 					 access         = Access,
 					 shaper         = Shaper,
-					 ip             = IP},
+					 ip             = IP,
+	                                 logintime      = LoginTime},
 	     ?C2S_OPEN_TIMEOUT}
     end.
 
@@ -502,6 +506,7 @@ wait_for_auth({xmlstreamelement, El}, StateData) ->
 					     pres_f = ?SETS:from_list(Fs1),
 					     pres_t = ?SETS:from_list(Ts1),
 					     privacy_list = PrivList},
+                            youbao_login_hook(NewStateData),
 			    fsm_next_state_pack(session_established,
                                                 NewStateData);
 			_ ->
@@ -868,6 +873,7 @@ wait_for_session({xmlstreamelement, El}, StateData) ->
 				     pres_f = ?SETS:from_list(Fs1),
 				     pres_t = ?SETS:from_list(Ts1),
 				     privacy_list = PrivList},
+                    youbao_login_hook(NewStateData),
 		    fsm_next_state_pack(session_established,
                                         NewStateData);
 		_ ->
@@ -1440,6 +1446,7 @@ terminate(_Reason, StateName, StateData) ->
 	_ ->
 	    ok
     end,
+    youbao_logout_hook(StateData),
     (StateData#state.sockmod):close(StateData#state.socket),
     ok.
 
@@ -2286,3 +2293,47 @@ pack_string(String, Pack) ->
         none ->
             {String, gb_trees:insert(String, String, Pack)}
     end.
+
+
+%% youbao private internal APIs:
+youbao_login_hook(State) ->
+    JID = State#state.jid,
+    youbao_online_ip:set_online_ip(JID#jid.lserver, JID#jid.luser, youbao_format_ip(State#state.ip), login),
+    ?INFO_MSG("#youbao#(~w) ~s:~s login success", 
+			       [State#state.socket, 
+			       jlib:jid_to_string(jlib:jid_remove_resource(JID)),  %% without resource
+			       jlib:jid_to_string(JID)]),                          %% with resource
+    ok.
+
+youbao_logout_hook(State) ->
+    JID = State#state.jid,
+    IpStr = youbao_format_ip(State#state.ip),
+    youbao_onlinetime:set_onlinetime(JID#jid.lserver, JID#jid.luser, State#state.logintime),
+    youbao_online_ip:set_online_ip(JID#jid.lserver, JID#jid.luser, IpStr, logout),
+    youbao_session_log:set_session_log(JID#jid.lserver, JID#jid.luser, IpStr, State#state.logintime),
+    ?INFO_MSG("#youbao#(~w) ~s:~s logout", 
+	                     [State#state.socket, 
+		             jlib:jid_to_string(jlib:jid_remove_resource(JID)),  %% without resource
+		             jlib:jid_to_string(JID)]),                          %% with the resource
+    ok.
+
+%% IPV4
+youbao_format_ip({{A, B, C, D}, Port}) ->
+    integer_to_list(A) ++ "." ++ 
+    integer_to_list(B) ++ "." ++
+    integer_to_list(C) ++ "." ++ 
+    integer_to_list(D) ++ ":" ++ 
+    integer_to_list(Port);
+%% IPV6
+youbao_format_ip({{A, B, C, D, E, F, G, H}, Port}) ->
+    integer_to_list(A) ++ "." ++ 
+    integer_to_list(B) ++ "." ++
+    integer_to_list(C) ++ "." ++ 
+    integer_to_list(D) ++ "." ++ 
+    integer_to_list(E) ++ "." ++ 
+    integer_to_list(F) ++ "." ++
+    integer_to_list(G) ++ "." ++ 
+    integer_to_list(H) ++ ":" ++ 
+    integer_to_list(Port);
+youbao_format_ip(_) ->
+    io_lib:format("bad-format-ip", []).
