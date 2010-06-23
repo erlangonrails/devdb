@@ -1,0 +1,23 @@
+{application, e2d_node,
+ [{description, "e2d_node application"},
+  {vsn, "0.1"},
+  {modules, [e2d_comm,
+             e2d_config,
+             e2d_coordinator,
+             e2d,
+             e2d_membership,
+             e2d_node,
+             e2d_node_sup,
+             e2d_server,
+             e2d_store,
+             e2d_store_mnesia,
+             e2d_sync,
+             e2d_util,
+             merkerl,
+             net_util,
+             vclock]},
+  {registered, [e2d_server, e2d_sup]},
+  {application, [kernel, stdlib, sasl, crypto, inets, mnesia]},
+  %{mod, {application_starter,[e2d,[]]}}
+  {mod, {e2d, []}}
+]}.

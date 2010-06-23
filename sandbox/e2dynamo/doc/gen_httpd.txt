@@ -1,0 +1,15 @@
+gen_httpd
+
+1. 该模块是一个自定义的行为模式, 基于mochiweb实现一个简单的httpd服务, 实现该模块,
+需要自己实现一个handle_request/1来处理Req请求.
+
+原理是:
+Loop = fun(Req) -> Module:handle_request(Req) end,
+mochiweb_http:start([{loop, Loop}, {name, "my_test_httpd"}, 
+	            {ip, "0.0.0.0"}, {port, 8000}]).
+
+2. 假如自己实现了一个模块MyModule, 可以这样启动一个httpd服务:
+Name是服务的名字
+Module是自己实现的Module, 如MyModule
+Config是启动时的参数, 如[{ip, "0.0.0.0"}, {port, 8000}]
+gen_httpd:init(Name :: string(), Module :: atom(), Config :: proplists()).

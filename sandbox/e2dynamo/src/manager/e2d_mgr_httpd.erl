@@ -120,5 +120,5 @@ negotiate_content_type(Req) ->
 
 server_header() ->
     OTPVersion = "R" ++ integer_to_list(erlang:system_info(compat_rel)) ++ "B",
-    [{"Server", "E2Dyanmo Manager/v0.1" ++
+    [{"Server", "E2Dyanmo Manager/" ++ e2d_server:get_version() ++
                 " (Erlang OTP/" ++ OTPVersion ++ ")"}].
