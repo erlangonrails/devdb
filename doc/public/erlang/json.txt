@@ -1,0 +1,84 @@
+介绍JSON
+
+1.  数据类型:
+<1> object
+{} 包含一系列无序的 Key-Value 键值对表示的
+
+{"key1":value1, "key2":value2}
+
+例如(value可以嵌套object):
+{"city":"Beijing", "street":"Chaoyang Road", "postcode":100025}
+{"name":"Mark", "address":
+    {"city":"Beijing", "street":"Chaoyang Road", "postcode":100025}
+}
+
+<2> array
+[value1, value2]
+
+例如:
+["abc", 12345, true, null]
+
+<3> value
+string
+number
+object
+array
+true
+false
+null
+
+<4> string
+除了字符 ",\,/ 和一些控制符(\b, \f, \n, \r, \t)需要编码外,
+其他 Unicode 字符可以直接输出.
+
+转义字符
+\\
+\/
+\"
+\b
+\f
+\n
+\r
+\t
+\u
+
+例如:
+"abc"
+
+<5> number
+12345(整数)
+-3.9e10 (浮点数)
+
+2. 客户端Javascript如何处理json?
+只需将其赋值给一个 JavaScript 变量, 就可以立刻使用该变量并更新页面中的信息
+
+function handleJson() {
+  var j = {"name":"Mark", "address":
+              {"city":"Beijing", "street":"Chaoyang Road", "postcode":100025}
+          };
+  jarr = ["abc", true, null, {"name":"username"}];
+  alert(j.name);
+  alert(j.address.city);
+  alert(jarr[0]);
+  alert(jarr[3].name);
+}
+
+3. Erlang服务器端如何处理json?
+使用mochijson2来编码和解码.
+
+数据类型的定义:
+@type iolist() = [char() | binary() | iolist()]
+@type iodata() = iolist() | binary()
+@type json_string() = atom | binary()
+@type json_number() = integer() | float()
+@type json_array() = [json_term()]
+@type json_object() = {struct, [{json_string(), json_term()}]}
+@type json_iolist() = {json, iolist()}
+@type json_term() = json_string() | json_number() | json_array() |
+                    json_object() | json_iolist()
+
+APIs:
+a. @spec decode(iolist()) -> json_term()
+   @doc Decode the given iolist to Erlang terms.
+b. @spec encode(json_term()) -> iolist()
+   @doc Encode the given as JSON to an iolist.
