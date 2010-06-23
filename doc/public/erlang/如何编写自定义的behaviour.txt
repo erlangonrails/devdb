@@ -1,0 +1,47 @@
+如何编写自定义的behaviour
+
+1. 关键:
+在自定义的行为模块中使用behaviour_info/1来导出callback函数.
+
+my_behaviour.erl   - 自定义的行为my_behaviour模块
+-module(my_behaviour).
+
+-export([behaviour_info/1]). 
+-export([start/1, stop/0]).
+
+behaviour_info(callbacks) ->   %% 定义callback函数, 实现该行为模式, 需要实现这个两个回调函数
+    [{init, 1},
+     {handle, 2}];
+behaviour_info(_Other) ->
+    undefined.
+
+start(Mod) ->
+    {ok, State} = Mod:init(0),
+    {ok, State1} = Mod:handle(add, State),
+    io:format("State: ~p~n", [State1]).
+
+stop() ->
+    stop.
+
+
+my_impl.erl        - 实现自定义行为my_behaviour的模块
+-module(my_impl).
+-export([init/1, handle/2]).
+
+init(State) ->
+    io:format("init: ~p~n", [State]),
+    {ok, State}.
+
+handle(Request, State) ->
+    io:format("handle request: ~p state: ~p~n", [Request, State]),
+    State1 = State + 1,
+    {ok, State1}.
+
+测试:(在Erlang Shell中运行)
+my_behaviour:start(my_impl).
+init: 0
+handle request: add state: 0
+State: 1
+ok
+
+
