@@ -1,0 +1,30 @@
+e2d_store_mnesia
+
+1. 该模块实现了基于mnesia的e2dynamo的后端存储引擎.
+e2dynamo的后端存储引擎必须导出的函数有下面5个:
+% the store module must have these functions
+-export([buckets/0, keys/2]).
+-export([get/1, put/3, del/1]).
+
+2. 这个mnesia系统包含了两张表: 
+data {key, context, value}
+bucket {key, size}
+
+3. 核心APIs:
+<1> @doc get all the buckets id the local node manager
+    -spec buckets() -> [bucket_id()]
+
+<2> @doc get the keys in specify range
+    -spec keys(Begin :: key(), End :: key()) -> [key()]
+
+<3> @doc 根据key获取value(附加vclock信息)
+    -spec get(Key :: key()) ->
+    {'ok', {vclock(), value()}} | {'ok', 'key_not_exist'} | {'error', any()}.
+
+<4> @doc 插入数据
+    -spec put(Key :: key(), Context :: vclock(), Value::value()) ->
+    {'ok', 'success'} | {'error', any()}.
+
+<5> @doc 删除数据
+    -spec del(Key :: key()) ->
+    {'ok', 'success'} | {'error', any()}.

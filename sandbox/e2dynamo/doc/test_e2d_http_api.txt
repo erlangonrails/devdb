@@ -1,0 +1,20 @@
+test_e2d_http_api
+
+1. 该模块主要功能是测试e2d_http_api这个客户端API模块以及服务器的性能.
+
+2. Actions: 提供了三种动作, 对应下面三种函数,
+每种动作会调用一次e2d_http_api模块对应的函数, 然后向父进行发送一条
+{self(), Reply, Time}的消息.
+self() - 发送get/put/del请求的工作进程的pid
+Reply  - 请求的处理结果
+Time   - 请求的时间, 单位是microseconds.
+
+aget(Srv, Key) -> fun()  -- e2d_http_api:get(Srv, Key)
+aput(Srv, Arg) -> fun()  -- e2d_http_api:put(Srv, Arg)
+adel(Srv, Key) -> fun()  -- e2d_http_api:del(Srv, Key)
+
+3. APIs:
+<1> start(Req), 发起一次测试请求, Req是2中的三个Action之一.
+<2> multi_req(Req, N), 多进程模拟并行的发起同一个请求, 测试结果.
+    我们最后可以获得总共发起了多少请求, 成功请求的个数, 失败请求的个数
+    请求的最大时间, 最小时间, 以及平均的请求响应时间.
