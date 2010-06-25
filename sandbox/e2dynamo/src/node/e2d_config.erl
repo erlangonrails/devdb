@@ -156,17 +156,20 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 
 %% get config from manager server based http
+%% Result = {status_line(), headers(), body()} | {status_code(), body()} | request_id() 
 get_ms_config(Url) ->
     %% get the config from manager server
     ?Debug("start get ms config ~n",[]),
     case net_util:http_get(Url, 5000) of
-        {ok, Result} ->
-            case e2d_util:consult_str(Result) of
-                {ok, _Term} = Config ->
-                    Config;
-                {error, _} ->
-                    {error, eformat}
+        {ok, {_StatusLine, _Headers, Body}} ->
+            case catch binary_to_term(Body) of
+		{'EXIT', _Error} ->
+		    {error, eformat};
+                Config ->
+		    {ok, Config}
             end;
+	{ok, _Result} ->
+	    {error, e_ms_config};
         {error, _Reason} ->
             {error, e_ms_config}
     end.

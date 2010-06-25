@@ -12,10 +12,35 @@
 -define(SERVER, ?MODULE).
 -define(CONFFILE, "e2d_manager.conf").
 
+%% 功能:
+%% 一个全局的配置模块, 其它模块可以从该模块读取配置文件的信息(get), 也可以更新(set)
+%% 配置文件的信息.
+%%
+%% 说明:
+%% 该模块是一个gen_server, 在启动的时候, 会自动读取e2d_manager.conf中的内容,
+%% 里面的内容是proplists格式的数据, 读取之后作为gen_server的State进行传递,
+%% 我们可以对这些数据做get/set操作, 来获取或者更新这些数据.
+%% 例如:
+%% [{n, 1},
+%%  {w, 1}, 
+%%  {r, 1},
+%%  {cookie, 'e2dynamo-random-cookie243234xcvasf23423423cfdslluwer'}, 
+%%  {api_timeout, 1000},
+%%  {buckets_number, 1024} 
+%% ].
+
+%% 补充:
+%% 1. TODO: 当前版本的配置文件必须和*.beam在同一个目录下, 在后续版本修复这个问题. 
+%% 2. 约定所有的Key都是atom()类型, Value没有类型限制
+%% 3. set/1, set/2我们在实现的时候使用的是lists:keyreplace/4而不是lists:keystore/4,
+%%    这意味着我们只能更新配置文件中存在的Key对应的Value, 但是不能插入新的{Key, Value}
+%%    对. - by design :)
+
 %% API
 -export([start_link/0]).
 -export([get/1, get/2]).
 -export([set/1, set/2]).
+
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	 terminate/2, code_change/3]).
@@ -43,8 +68,7 @@ set(KVs) when is_list(KVs) ->
         KVs).
 
 set(Key, Value) ->
-    {Key2, Value2} = normalize_kv(string:to_lower(Key), Value),
-    gen_server:call(?SERVER, {set, Key2, Value2}).
+    gen_server:call(?SERVER, {set, Key, Value}).
 
 %%====================================================================
 %% API
@@ -92,12 +116,12 @@ init([]) ->
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
 handle_call({get, Par}, _From, State) ->
-    Reply = proplists:get_value(Par, State),
+    Reply = proplists:get_value(Par, State, undefined),
     {reply, Reply, State};
 handle_call({get_multi, Pars}, _From, State) ->
     Reply =
     lists:map(fun(Key) ->
-                      proplists:get_value(Key, State)
+                  proplists:get_value(Key, State, undefined)
               end,
               Pars),
     {reply, Reply, State};
@@ -145,9 +169,3 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
-normalize_kv([Q], Value) when Q =:= $n orelse Q =:= $r orelse Q =:= $w ->
-    {list_to_atom([Q]), list_to_integer(Value)};
-normalize_kv("cookie", Value) ->
-    {cookie, list_to_atom(Value)};
-normalize_kv("bn", Value) ->    % buckets_number
-    {buckets_number, list_to_integer(Value)}.

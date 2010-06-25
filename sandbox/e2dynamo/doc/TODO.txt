@@ -1,0 +1,4 @@
+1. manager server对应的managerctrl脚本以及对应的控制模块.
+   增加一个e2d_mgr_ctrl模块.
+2. manager server和node通讯的数据格式修改成json格式, 设计manager server
+   的e2d_mgr_httpd的模块以及node的e2d_config模块.

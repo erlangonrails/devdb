@@ -1,83 +1,53 @@
 %%%-------------------------------------------------------------------
-%%% File    : e2d_mgr_nodes.erl
+%%% File    : e2d_server.erl
 %%% Author  : liqiang 
 %%% Description : 
 %%%
-%%% Created : 21 Jun 2010 by liqiang 
+%%% Created : 24 Jun 2010 by liqiang 
 %%%-------------------------------------------------------------------
--module(e2d_mgr_nodes).
--include("e2d_manager.hrl").
+-module(e2d_server).
+-include("e2d.hrl").
 -behaviour(gen_server).
--define(SERVER, ?MODULE).
-
-%% 模块说明:
-%% 这个模块管理所有的node信息, 对外提供了搜索的功能.
-%%
-%% 添加 -> 我们可以添加node到这个模块中, 添加时候的key是node的id,
-%%        也就是用不同的id来区分不同的node.
-%% 获取 -> 我们提供了根据IP的搜索功能, 可以根据IP来搜索Node.
-%%
-%% gen_server的State就是一个node_info的列表, 如:
-%% [{node_info, 1, name1, {192.169.0.1}}, 
-%%  {node_info, 2, name2, {192.169.0.2}}, 
-%%  {node_info, 3, name3, {192.169.0.3}}]
-%%
-%% 数据结构:
-%% node_info, 一个node是一个三元组, id, name和ip
-%% the node info in the manager
-%% -record(node_info, {
-%%     id = 0 :: non_neg_integer(),
-%%     name = '' :: atom(),
-%%     ip = {0, 0, 0, 0} :: ip_address()
-%% }).
 
 %% API
--export([add_node/1, add_node/3]).
--export([get_node/1, get_nodes/0, exclude_node/2]).
 -export([start_link/0]).
-
+-export([get/1, put/3, del/1]).
+-export([get_version/0]).
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	 terminate/2, code_change/3]).
 
-add_node(Node = #node_info{}) ->
-    gen_server:call(?SERVER, {add_node, Node}).
+-record(state, {}).
+-define(SERVER, ?MODULE).
+-type value_info() :: [{value(), context()}].
 
-add_node(Id, Name, Ip)
-    when is_integer(Id) andalso is_atom(Name) andalso is_list(Ip)  ->
-    {ok, IpTuple} = inet_parse:address(Ip),
-    add_node(#node_info{id = Id, name = Name, ip = IpTuple}).
+%% @doc get the key
+-spec get(Key :: key()) ->
+    {'ok', any()} | {'error', atom()}.
+get(Key) ->
+    gen_server:call(?SERVER, {api, {get, Key}}, infinity).
 
-get_node(Ip) when is_list(Ip) ->
-    {ok, IpTuple} = inet_parse:address(Ip),
-    get_node(IpTuple);
-get_node(Ip) when is_tuple(Ip) ->
-    gen_server:call(?SERVER, {get_node, Ip}).
+%% @doc update the key
+-spec put(Key :: key(), Context :: context(), Value :: value()) ->
+    {'ok', any()} | {'error', atom()}.
+put(Key, Context, Value) ->
+    gen_server:call(?SERVER, {api, {put, Key, Context, Value}}, infinity).
 
-%% 返回State, 也就是node_info的列表.
-get_nodes() ->
-    gen_server:call(?SERVER, {get_all}).
+%% @doc delete the key
+-spec del(Key :: key()) ->
+    'ok' | {'error', atom()}.
+del(Key) ->
+    gen_server:call(?SERVER, {api, {del, Key}}, infinity).
 
-%% 删除Nodes中(第一个)FileName为Value的项目, 返回新的node列表.
-%%
-%% 例如:
-%% 删除Nodes0中id为12的node, 返回一个新的node的列表Nodes.
-%% Nodes0 = e2d_mgr_nodes:get_nodes(),
-%% Nodes = e2d_mgr_nodes:exclude_node({id, 12}, Nodes0),
-exclude_node({FieldName, Value}, Nodes) ->
-    Fields = record_info(fields, node_info), %% Note: return [id, name, ip] not [node_info, id, name, ip]
-
-    %% 小技巧, 如何获取list中的keypos :)
-    PreList = lists:takewhile(fun(F) when F =:= FieldName -> false;
-                                (_F) -> true
-                             end,
-                            Fields),
-    KeyPos = length(PreList) + 2,
-    case lists:keytake(Value, KeyPos, Nodes) of
-        {value, _, Nodes2} ->
-            Nodes2;
-        false ->
-            Nodes
+%% @doc get the application version
+-spec get_version() -> string().
+get_version() ->
+    Apps = application:loaded_applications(),
+    case lists:keysearch(e2d_node, 1, Apps) of
+    {value, {_, _, Vsn}} ->
+        Vsn;
+    false ->
+        "0.0.0"
     end.
 
 %%====================================================================
@@ -102,7 +72,7 @@ start_link() ->
 %% Description: Initiates the server
 %%--------------------------------------------------------------------
 init([]) ->
-    {ok, []}.
+    {ok, #state{}}.
 
 %%--------------------------------------------------------------------
 %% Function: %% handle_call(Request, From, State) -> {reply, Reply, State} |
@@ -113,22 +83,16 @@ init([]) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling call messages
 %%--------------------------------------------------------------------
-handle_call({add_node, #node_info{id = Id} = Node}, _From, State) ->
-    State2  = lists:keystore(Id, #node_info.id, State, Node),
-    {reply, ok, State2};
-handle_call({get_node, IP}, _From, State) ->
-    Reply =
-    case lists:keysearch(IP, #node_info.ip, State) of
-        {value, Tuple} ->
-            Tuple;
-        false ->
-            false
-    end,
+handle_call({api, Req}, From, State) ->
+    % don't block the main loop, the reply will be send in new process
+    do_api_request(Req, From, State),
+    {noreply, State};
+handle_call({node_req, Req}, _From , State) ->
+    Reply = do_req(Req),
     {reply, Reply, State};
-handle_call({get_all}, _From, State) ->
-    {reply, State, State};
-handle_call(_Req, _From, State) ->
+handle_call(_Msg, _From, State) ->
     {noreply, State}.
+
 
 %%--------------------------------------------------------------------
 %% Function: handle_cast(Msg, State) -> {noreply, State} |
@@ -136,6 +100,9 @@ handle_call(_Req, _From, State) ->
 %%                                      {stop, Reason, State}
 %% Description: Handling cast messages
 %%--------------------------------------------------------------------
+handle_cast({api, from, From, Req}, State) ->
+    do_api_request(Req, From, State),
+    {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -168,3 +135,42 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
+%% do the api request
+do_api_request(Req, From, _State) ->
+    proc_lib:spawn_link(
+        fun() ->
+            Key = get_key(Req),
+            {ok, Coor, Cands} = e2d_membership:select_coordinator(Key),
+            ?Debug("the Coordinator is ~p~n candidate:~p~n", [Coor, Cands]),
+            IsMe = Coor#e2dnode.name =:= node(),
+            case IsMe of % I'm the coordinator
+                true ->
+                    ?Debug("i'm the coordinator~n", []),
+                    Result = e2d_coordinator:route(Req, [Coor | Cands]),
+                    ?Debug("~p route return:~n~p~n", [?MODULE, Result]),
+                    gen_server:reply(From, Result);
+                false -> % transmit the api request to the fact coordinator
+                    ?Debug("transmit the api request to the coordinator:~p~n", [Coor]),
+                    gen_server:cast({e2d_server, Coor#e2dnode.name}, {api, from, From, Req})
+            end
+      end).
+
+%% get the parmater Key from request
+get_key({get, Key}) ->
+        Key;
+get_key({put, Key, _Context, _Value}) ->
+        Key;
+get_key({del, Key}) ->
+        Key.
+
+%% handle the request from the other nodes
+do_req({node_info}) ->
+    e2d_node:self();
+do_req({remove_buckets, Buckets}) ->
+    e2d_store:remove_buckets(Buckets);
+do_req({incharge_buckets_id}) ->
+    e2d_store:get_buckets_id(incharge);
+do_req({replica_buckets_id}) ->
+    e2d_store:get_buckets_id(replica);
+do_req({get_key, Key}) ->
+    e2d_store:get(Key).

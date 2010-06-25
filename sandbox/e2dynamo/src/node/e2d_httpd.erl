@@ -34,7 +34,6 @@ handle_request(Req) ->
                         , Path
                         , Resp:get(code)]).
 
-
 %%
 %% internal API
 %%
@@ -67,8 +66,7 @@ handle_request(Req, Method, Path) ->
 
 %% handle welcome info
 handle_welcom(Req) ->
-    send_json(Req, 200, <<"Welcom to use E2dynamo! version:",
-                (iolist_to_binary(e2d_server:get_version()))/binary >>).
+    send_json(Req, 200, <<"Welcom to use E2dynamo! version: v0.1">>).
 
 %% handle the get  command
 handle_req_get(Key, Req) ->
@@ -85,7 +83,8 @@ handle_req_get(Key, Req) ->
                 Values),
             send_json(Req, {struct, [{ok, true} | {value, Values2}]});
          {error, {T, R}} ->
-            send_json(Req, {struct, [{error, e2d_util:any_to_binary(T)}, {reason, e2d_util:any_to_binary(R)}]})
+            send_json(Req, {struct, [{error, e2d_util:any_to_binary(T)}, 
+				     {reason, e2d_util:any_to_binary(R)}]})
     end.
 
 %% handle the put command
@@ -107,7 +106,8 @@ handle_req_put(Key, Req) ->
                     send_json(Req, {struct, [{ok, true}]});
                 {error, {T, R}} ->
                     %?Debug("put error: ~p ~n ~p", [T, R]),
-                    send_json(Req, {struct,  [{error, e2d_util:any_to_binary(T)}, {reason, e2d_util:any_to_binary(R)}]})
+                    send_json(Req, {struct,  [{error, e2d_util:any_to_binary(T)}, 
+					      {reason, e2d_util:any_to_binary(R)}]})
             end
     end.
 
@@ -121,7 +121,8 @@ handle_req_delete(Key, Req) ->
         ok ->
             send_json(Req, {struct, [{ok, true}]});
         {error, {T, R}} ->
-            send_json(Req, {struct,  [{error, e2d_util:any_to_binary(T)}, {reason, e2d_util:any_to_binary(R)}]})
+            send_json(Req, {struct,  [{error, e2d_util:any_to_binary(T)}, 
+				      {reason, e2d_util:any_to_binary(R)}]})
     end.
 
 %% send the error msg
@@ -134,7 +135,7 @@ send_error_rsp(Req, Error) ->
 
 %% error to json
 error_to_json(Error) ->
-     {HttpCode, Atom, Reason} = error_to_json0(Error),
+    {HttpCode, Atom, Reason} = error_to_json0(Error),
     FormattedReason =
     case (catch io_lib:format("~s", [Reason])) of
         List when is_list(List) ->
@@ -144,8 +145,7 @@ error_to_json(Error) ->
     end,
 
     Json = {struct, [{error, iolist_to_binary(atom_to_list(Atom))},
-                            {reason, iolist_to_binary(FormattedReason)}
-                            ]},
+                     {reason, iolist_to_binary(FormattedReason)}]},
     {HttpCode, Json}.
 
 error_to_json0({badarg, keyid_not_number}) ->
@@ -153,7 +153,18 @@ error_to_json0({badarg, keyid_not_number}) ->
 error_to_json0(Error) ->
     {500, error, Error}.
 
-%%  send json object to peer
+%% send json object to peer
+%% Value必须是一个json_term()
+%%
+%% @type iolist() = [char() | binary() | iolist()]
+%% @type iodata() = iolist() | binary()
+%% @type json_string() = atom | binary()
+%% @type json_number() = integer() | float()
+%% @type json_array() = [json_term()]
+%% @type json_object() = {struct, [{json_string(), json_term()}]}
+%% @type json_iolist() = {json, iolist()}
+%% @type json_term() = json_string() | json_number() | json_array() |
+%%                     json_object() | json_iolist()
 send_json(Req, Value) ->
     send_json(Req, 200, Value).
 
@@ -171,5 +182,5 @@ send_json(Req, Code, Headers, Value) ->
 
 server_header() ->
     OTPVersion = "R" ++ integer_to_list(erlang:system_info(compat_rel)) ++ "B",
-    [{"Server", "E2Dyanmo/" ++ e2d_server:get_version() ++
+    [{"Server", "E2Dyanmo/v0.1" ++ 
                 " (Erlang OTP/" ++ OTPVersion ++ ")"}].

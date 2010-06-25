@@ -1,0 +1,28 @@
+
+1. manager模块的原理
+这个模块主要有以下几个部分组成:
+e2d_mgr_sysconf - 配置信息的读取模块, 这个模块会读取配置文件的信息, 主要是一些
+                  全局的配置信息
+e2d_mgr_nodes   - node的管理模块, 管理所有的nodes的配置信息, 只有在这个模块'注册'
+                  过的node才可以通过发送HTTP GET /config请求来获取自己的配置信息,
+                  以及集群中其它节点的集合信息.
+                  如果node没在该模块注册过, 发送HTTP GET /config请求的时候会返回
+                  如下404的信息: This Node is not in the Cluster
+e2d_mgr_httpd   - 基于mochiweb的后台httped进程, 侦听在8000端口, 负责处理node的http
+                  请求, 并返回结果.
+ed2_mgr         - 整个manager模块的application和supervisor, 监控其它模块.
+
+2. 如何测试manager模块?
+<1> copy conf/e2d_manager.conf到正确的目录, 当前版本需要拷贝到*.beam所在的目录
+<2> 在erlang shell中运行下面命令启动该模块
+    appliaction:start(e2d_mgr).
+<3> 通过浏览器访问http://localhost:8000/config, 会返回如下信息:
+    This Node is not in the Cluster
+    (这是因为当前e2d_mgr_nodes模块中没有任何nodes的信息)
+<4> 手动添加node到e2d_mgr_nodes模块中:
+    a. 添加'自身'
+       e2d_mgr_nodes:add_node(1001, node1, "127.0.0.1").
+    b. 继续添加两个节点
+       e2d_mgr_nodes:add_node(1002, node2, "127.0.0.2").
+       e2d_mgr_nodes:add_node(1003, node3, "127.0.0.3").
+
