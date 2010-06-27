@@ -62,11 +62,15 @@ fresh(NumPartitions, SeedNode) ->
 		   IndexAsInt <- lists:seq(0,(?RINGTOP-1),Inc)]}.
 
 % @doc Find the Node that owns the partition identified by IndexAsInt.
-% @spec lookup(IndexAsInt :: integer(), CHash :: chash()) -> node()
+% @spec lookup(IndexAsInt :: integer(), CHash :: chash()) -> node() | undefined
 lookup(IndexAsInt, CHash) ->
     {_NumPartitions, Nodes} = CHash,
-    {IndexAsInt, X} = proplists:lookup(IndexAsInt, Nodes),
-    X.
+    case proplists:lookup(IndexAsInt, Nodes) of
+	none ->
+	    undefined;
+	{_INdexAsInt, X} ->
+	    X
+    end.
 
 % @doc Return true if named Node owns any partitions in the ring, else false.
 % @spec contains_name(Name :: node(), CHash :: chash()) -> bool()

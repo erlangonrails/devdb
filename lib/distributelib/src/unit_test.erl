@@ -31,6 +31,26 @@ test_vclock() ->
     ok.
 
 test_chash() ->
+    %% Range = node_range(8),
+
+    %% 要注意, 一个ring的partition的个数一旦确定, 不能修改, 只能update替换节点.
+    A0 = chash:fresh(8, node0),
+    M0 = chash:members(A0), 
+    N0 = chash:nodes(A0),
+    assert([node0], M0), 
+    assert(8, chash:size(A0)),
+    ?PRINT("members: ~p~n", [M0]),
+    ?PRINT("nodes: ~n~p~n", [N0]),
+    
+    Key1 = chash:key_of("this is key1"),
+    Key2 = chash:key_of("this is key2"),
+    Key3 = chash:key_of("this is key3"),
+    S1 = chash:successors(Key1, A0),
+    S2 = chash:successors(Key2, A0),
+    S3 = chash:successors(Key3, A0),
+    ?PRINT("S1: ~p~n~p~n", [hash(Key1), S1]),
+    ?PRINT("S2: ~p~n~p~n", [hash(Key2), S2]),
+    ?PRINT("S3: ~p~n~p~n", [hash(Key3), S3]),
     ?PRINT("================ test_chash passed! ================~n", []),    		
     ok.
 
@@ -94,3 +114,7 @@ hash(ShaData) when is_binary(ShaData) ->
 %% hash(Data) when is_binary(Data) ->
 %%     <<Id:128, _/bits>> = erlang:md5(Data),
 %%     Id.
+
+
+%% node_range(NumberofBuckets) ->
+%%     trunc(math:pow(2, 160)) div NumberofBuckets.
