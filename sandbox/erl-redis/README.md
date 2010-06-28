@@ -70,7 +70,7 @@ e.g. 3 (use the redis in OTP)
 
     % start a redis client:
     Name = redis_client:name(Host, Port),
-    {ok, _} = redis_cilent_sup:connect(Host, Port, Pass, Name),
+    {ok, _} = redis_conn_sup:connect(Host, Port, Pass, Name),
     Redis = redis_client:handler(Name),
     Redis:set("k1", "v1"),
     Redis:get("k1").
@@ -83,7 +83,7 @@ e.g. 4 (use in OTP with connection pool)
     % start client pool
     [begin
         Name = redis_client:name(Host, Port, I)
-        {ok, _} = redis_cilent_sup:connect(Host, Port, Pass, Name)
+        {ok, _} = redis_conn_sup:connect(Host, Port, Pass, Name)
     end || I <- lists:seq(1, 5)],
 
     % random select a client
