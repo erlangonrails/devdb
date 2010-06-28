@@ -60,6 +60,9 @@
 <7> sha(term()) -> 
     返回一个term()对应的sha值.
 
+补充:
+allkeys/1, diff/2这两个API返回的结果在内部都使用了lists:usort/1来排序 :)
+
 6. 例子
    参考merkerl模块中的test_merkle/0中的使用方式.
 
