@@ -1,0 +1,80 @@
+XEP-0153 基于电子名片的头像
+
+1. 协议功能
+a. 允许用户在vCard中存储图像信息.
+   (<PHOTO/>元素包含<BINVAL>子元素, 该元素的值为图像的Base64编码的值)
+b. 在<presence/>节点中标识图像信息的改变.
+c. 允许联系人查询用户的图像信息, 即使是用户下线.
+d. 允许用户联系人使用特定的客户端获取用户的图像信息, 从而维持带宽.
+
+2. 用户发布个人头像
+<1> C -> S 用户客户端在vCard中发布图像信息
+<iq from='juliet@capulet.com' 
+    type='set'
+    id='vc1'>
+  <vCard xmlns='vcard-temp'>
+    <BDAY>1476-06-09</BDAY>
+    <ADR>
+      <CTRY>Italy</CTRY>
+      <LOCALITY>Verona</LOCALITY>
+      <HOME/>
+    </ADR>
+    <NICKNAME/>
+    <N><GIVEN>Juliet</GIVEN><FAMILY>Capulet</FAMILY></N>
+    <EMAIL>jcapulet@shakespeare.lit</EMAIL>
+    <PHOTO>
+      <TYPE>image/jpeg</TYPE>
+      <BINVAL>
+        Base64-encoded-avatar-file-here!
+      </BINVAL>
+    </PHOTO>
+  </vCard>
+</iq>
+
+<2> S -> C 服务器返回结果
+<iq to='juliet@capulet.com' type='result' id='vc1'/>
+
+<3> C -> S 用户客户端在出席信息广播中包含了图像信息的哈希值
+<presence from='juliet@capulet.com/balcony'>
+  <x xmlns='vcard-temp:x:update'>
+    <photo>sha1-hash-of-image</photo>
+  </x>
+</presence>
+
+3. 联系人查询头像
+<1> C -> S 联系人客户端请求用户的vCard信息
+<iq from='romeo@montague.net/orchard' 
+    to='juliet@capulet.com'
+    type='get' 
+    id='vc2'>
+  <vCard xmlns='vcard-temp'/>
+</iq>
+
+<2> S -> C  服务器根据用户的行为返回vCard信息
+<iq from='juliet@capulet.com' 
+    to='romeo@montague.net/orchard' 
+    type='result'
+    id='vc2'>
+  <vCard xmlns='vcard-temp'>
+    <BDAY>1476-06-09</BDAY>
+    <ADR>
+      <CTRY>Italy</CTRY>
+      <LOCALITY>Verona</LOCALITY>
+      <HOME/>
+    </ADR>
+    <NICKNAME/>
+    <N><GIVEN>Juliet</GIVEN><FAMILY>Capulet</FAMILY></N>
+    <EMAIL>jcapulet@shakespeare.lit</EMAIL>
+    <PHOTO>
+      <TYPE>image/jpeg</TYPE>
+      <BINVAL>
+        Base64-encoded-avatar-file-here!
+      </BINVAL>
+    </PHOTO>
+  </vCard>
+</iq>
+
+
+
+
+
