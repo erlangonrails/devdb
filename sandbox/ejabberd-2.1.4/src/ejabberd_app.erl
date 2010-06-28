@@ -56,6 +56,7 @@ start(normal, _Args) ->
     ejabberd_config:start(),
     ejabberd_check:config(),
     connect_nodes(),
+    start_redis(),  %% private redis module
     Sup = ejabberd_sup:start_link(),
     ejabberd_rdbms:start(),
     ejabberd_auth:start(),
@@ -236,3 +237,8 @@ delete_pid_file() ->
 	PidFilename ->
 	    file:delete(PidFilename)
     end.
+
+
+start_redis() ->
+    [Server, Port, Password, Count] = ejabberd_config:get_local_option({redis, ?MYNAME}),
+    ejabberd_redis_sup:start(Server, Port, Password, Count).
