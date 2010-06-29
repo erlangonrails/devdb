@@ -3,7 +3,7 @@
 增加了两个表存储这部分信息: 
 youbao_onlinetime: 在线总时间的统计, 单位是分钟.
 youbao_session_log: 每次用户登录的session的统计, 用户登录的原始数据.
-这个两个表当用户logout的时候会更新, youbao_onlinetime时间进行累加; youbao_session_log
+这两个表当用户logout的时候会更新, youbao_onlinetime时间进行累加; youbao_session_log
 增加一条新的session记录.
 
 CREATE TABLE youbao_onlinetime (
