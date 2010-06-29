@@ -1,0 +1,85 @@
+基于VCard的头像存储
+
+a. <PHOTO/>元素包含<BINVAL>子元素, 该元素的值为图像的Base64编码的值.
+b. 存储位置从mysql切成redis
+   我们把原本存储在mysql vcard表中的信息切成redis存储, 只是修改了odbc_queries中
+   的两个APIs: set_vcard/26和get_vcard/2, 保持返回值格式和mysql driver的兼容,
+   对上层应用没有影响.
+c. 使用Redis和MySQL存储数据的一点区别:
+   使用MySQL存储string()的时候, 需要调用ejabberd_odbc:escape(Str)来对特殊字符进行转义
+   处理.
+   使用redis存储string()的时候, 不需要调用该API进行转义处理, 调用之后反而会产生格式错误,
+   这点在切换数据存储的时候应该注意, 否则会产生数据格式上的, 比如xml格式错误之类的bug.
+   
+   例如: mod_vcard_odbcset_vcard/3的实现中切换数据存储时的变化:
+   i. 存储数据到mysql
+   SVCARD = ejabberd_odbc:escape(lists:flatten(xml:element_to_string(VCARD)))
+   ii. 存储数据到redis
+   SVCARD = lists:flatten(xml:element_to_string(VCARD))
+
+d. 我们存储redis的时候, 使用的Key是: "svcard_" ++ LUsername
+   例如:
+   user1@91youbao.com, 对应的VCard-Key是svcard_user1
+
+1. 用户发布个人头像
+<1> C -> S 用户客户端在vCard中发布图像信息
+<iq from='juliet@capulet.com' 
+    type='set'
+    id='vc1'>
+  <vCard xmlns='vcard-temp'>
+    <BDAY>1476-06-09</BDAY>
+    <ADR>
+      <CTRY>Italy</CTRY>
+      <LOCALITY>Verona</LOCALITY>
+      <HOME/>
+    </ADR>
+    <NICKNAME/>
+    <N><GIVEN>Juliet</GIVEN><FAMILY>Capulet</FAMILY></N>
+    <EMAIL>jcapulet@shakespeare.lit</EMAIL>
+    <PHOTO>
+      <TYPE>image/jpeg</TYPE>
+      <BINVAL>
+        Base64-encoded-avatar-file-here!
+      </BINVAL>
+    </PHOTO>
+  </vCard>
+</iq>
+
+<2> S -> C 服务器返回结果
+<iq to='juliet@capulet.com' type='result' id='vc1'/>
+
+2. 获取联系人头像
+<1> C -> S 联系人客户端请求用户的vCard信息
+<iq from='romeo@montague.net/orchard' 
+    to='juliet@capulet.com'
+    type='get' 
+    id='vc2'>
+  <vCard xmlns='vcard-temp'/>
+</iq>
+
+<2.0> S -> C  服务器根据用户的行为返回vCard信息
+<iq from='juliet@capulet.com' 
+    to='romeo@montague.net/orchard' 
+    type='result'
+    id='vc2'>
+  <vCard xmlns='vcard-temp'>
+    <BDAY>1476-06-09</BDAY>
+    <ADR>
+      <CTRY>Italy</CTRY>
+      <LOCALITY>Verona</LOCALITY>
+      <HOME/>
+    </ADR>
+    <NICKNAME/>
+    <N><GIVEN>Juliet</GIVEN><FAMILY>Capulet</FAMILY></N>
+    <EMAIL>jcapulet@shakespeare.lit</EMAIL>
+    <PHOTO>
+      <TYPE>image/jpeg</TYPE>
+      <BINVAL>
+        Base64-encoded-avatar-file-here!
+      </BINVAL>
+    </PHOTO>
+  </vCard>
+</iq>
+
+<2.1> S -> C 如果请求的用户的VCard不存在
+<iq from="juliet@capulet.com" to="romeo@montague.net/orchard" id="vc2" type="result"/>
