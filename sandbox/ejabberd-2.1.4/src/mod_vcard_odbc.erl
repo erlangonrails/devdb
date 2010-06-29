@@ -215,9 +215,10 @@ set_vcard(User, LServer, VCARD) ->
 	true ->
 	    Username = ejabberd_odbc:escape(User),
 	    LUsername = ejabberd_odbc:escape(LUser),
-	    SVCARD = ejabberd_odbc:escape(
-		       lists:flatten(xml:element_to_string(VCARD))),
-
+            %% 由于Vcard切换到redis存储, 所以不需要再进行escape
+	    %%SVCARD = ejabberd_odbc:escape(
+	    %%	       lists:flatten(xml:element_to_string(VCARD))),
+            SVCARD = lists:flatten(xml:element_to_string(VCARD)),
 	    SFN = ejabberd_odbc:escape(FN),
 	    SLFN = ejabberd_odbc:escape(LFN),
 	    SFamily = ejabberd_odbc:escape(Family),
@@ -240,7 +241,6 @@ set_vcard(User, LServer, VCARD) ->
 	    SLOrgName = ejabberd_odbc:escape(LOrgName),
 	    SOrgUnit = ejabberd_odbc:escape(OrgUnit),
 	    SLOrgUnit = ejabberd_odbc:escape(LOrgUnit),
-
 	    odbc_queries:set_vcard(LServer, LUsername, SBDay, SCTRY, SEMail,
 				   SFN, SFamily, SGiven, SLBDay, SLCTRY,
 				   SLEMail, SLFN, SLFamily, SLGiven,

@@ -10,6 +10,13 @@
 -behaviour(gen_server).
 
 %% API
+-export([set/2,
+	 set/3,
+	 get/1]).
+-export([set_add/2,
+	 set_rm/2,
+	 set_members/1,
+	 set_random_member/1]).
 -export([get_redis/0]).
 -export([start_link/3]).
 
@@ -20,6 +27,48 @@
 	 terminate/2, code_change/3]).
 
 -record(state, {host, port, count}).
+
+%%------------------------------------------------------------------------------
+%% string commands 
+%%------------------------------------------------------------------------------
+%% -spec set(Key :: key(), Val :: str()) -> 'ok'.
+set(Key, Val) ->
+    Redis = get_redis(),
+    Redis:set(Key, Val).
+
+%% -spec set(key(), str(), second()) -> 'ok'.
+set(Key, Val, Expire) ->
+    Redis = get_redis(),
+    Redis:set(Key, Val, Expire).
+
+%% -spec get(Key :: key()) -> null() | binary().
+get(Key) ->
+    Redis = get_redis(),
+    Redis:get(Key).
+
+%%------------------------------------------------------------------------------
+%% set commands 
+%%------------------------------------------------------------------------------
+
+%% -spec set_add(Key :: key(), Mem :: str()) -> boolean().
+set_add(Key, Mem) ->
+    Redis = get_redis(),
+    Redis:set_add(Key, Mem).
+
+%% -spec set_add(Key :: key(), Mem :: str()) -> boolean().
+set_rm(Key, Mem) ->
+    Redis = get_redis(),
+    Redis:set_rm(Key, Mem).
+
+%% spec set_members(Key :: key()) -> [value()].
+set_members(Key) ->
+    Redis = get_redis(),
+    Redis:set_members(Key).
+
+%% -spec set_random_member(Key :: key()) -> value().
+set_random_member(Key) ->
+    Redis = get_redis(),
+    Redis:set_random_member(Key).
 
 get_redis() ->
     gen_server:call(?SERVER, {get_redis}).

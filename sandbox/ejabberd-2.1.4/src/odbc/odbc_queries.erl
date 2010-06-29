@@ -414,16 +414,24 @@ del_user_private_storage(LServer, Username) ->
       LServer,
       ["delete from private_storage where username='", Username, "';"]).
 
+
+%% 修改vcard的存储方式, 把vcard表的内切到redis存储.
 set_vcard(LServer, LUsername, SBDay, SCTRY, SEMail, SFN, SFamily, SGiven,
 	  SLBDay, SLCTRY, SLEMail, SLFN, SLFamily, SLGiven, SLLocality,
 	  SLMiddle, SLNickname, SLOrgName, SLOrgUnit, SLocality, SMiddle,
 	  SNickname, SOrgName, SOrgUnit, SVCARD, Username) ->
+
+    %% redis存储vcard信息
+    RedisKey = "svcard_" ++ LUsername,
+    ejabberd_redis:set(RedisKey, SVCARD),
+
     ejabberd_odbc:sql_transaction(
       LServer,
       fun() ->
-	      update_t("vcard", ["username", "vcard"],
-		       [LUsername, SVCARD],
-		       ["username='", LUsername, "'"]),
+               %%切成redis存储vcard, 注视掉这部分
+	       %% update_t("vcard", ["username", "vcard"],
+	       %%	       [LUsername, SVCARD],
+	       %%	       ["username='", LUsername, "'"]),
 	      update_t("vcard_search",
 		       ["username", "lusername", "fn", "lfn", "family",
 			"lfamily", "given", "lgiven", "middle", "lmiddle",
@@ -438,11 +446,23 @@ set_vcard(LServer, LUsername, SBDay, SCTRY, SEMail, SFN, SFamily, SGiven,
 		       ["lusername='", LUsername, "'"])
       end).
 
-get_vcard(LServer, Username) ->
-    ejabberd_odbc:sql_query(
-      LServer,
-      ["select vcard from vcard "
-       "where username='", Username, "';"]).
+%% 从redis获取vcard的内容:
+%% (兼容MySQL Driver的返回值格式)
+get_vcard(_LServer, Username) ->
+    RedisKey = "svcard_" ++ Username,
+    case ejabberd_redis:get(RedisKey) of
+	null ->
+	    {selected, ["vcard"], []};
+	Data ->
+	    SVCARD = binary_to_list(Data),
+	    {selected, ["vcard"], [{SVCARD}]}
+    end.
+
+%% get_vcard(LServer, Username) ->
+%%     ejabberd_odbc:sql_query(
+%%       LServer,
+%%       ["select vcard from vcard "
+%%        "where username='", Username, "';"]).
 
 get_default_privacy_list(LServer, Username) ->
     ejabberd_odbc:sql_query(
