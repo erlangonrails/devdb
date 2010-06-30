@@ -1,0 +1,75 @@
+介绍如何为ejabberd增加一个新的IQ命名空间, 增加自己的私有服务协议.
+
+1. ejabberd没有提供用户在线时间统计的功能, 我们想通过扩展IQ协议, 增加一个新的命名空间
+来实现该该功能.
+(前提是后台已经对用户的在线时间有统计, 只需要通过IQ提供一个查询接口)
+   
+
+2. 协议规定:
+新增的命名空间是: youbao:xmpp:onlinetime
+<1> C -> S (user2想查询user1的在线时间)
+<iq type='get' to='user1@91youbao.com' from='user2@91youbao.com' id='v1'>
+  <query xmlns='youbao:xmpp:onlinetime'/>
+</iq>
+
+<2> S -> C (服务器返回结果)
+(如果没有用户在线时间的统计, 则返回0)
+<iq xmlns="jabber:client" from="user2@91youbao.com" 
+    to="user1@91youbao.com/exmpp#1277866988908261" id="v1" type="result">
+  <query xmlns="youbao:xmpp:onlinetime">
+    <onlinetime>12345</onlinetime>
+  </query>
+</iq>
+
+3. 实现:
+<1> 新增的相关模块, 处理xmlns="youbao:xmpp:onlinetime"的IQ-stanza.
+-module(mod_youbao_onlinetime).
+-export([start/2, stop/1, process_iq/3]).
+
+-behaviour(gen_mod).
+
+-include("ejabberd.hrl").
+-include("jlib.hrl").
+
+-define(NS_YOUBAO_ONLINETIME, "youbao:xmpp:onlinetime").
+-define(STANZA_ONLINETIME(Time),
+	{xmlelement, "query",
+	 [{"xmlns", ?NS_YOUBAO_ONLINETIME}],
+	 [{xmlelement, "onlinetime", [], [{xmlcdata, Time}]}]}).
+
+start(Host, _Opts) ->
+    gen_iq_handler:add_iq_handler(ejabberd_sm, Host, ?NS_YOUBAO_ONLINETIME,
+				  ?MODULE, process_iq, one_queue).
+
+stop(Host) ->
+    gen_iq_handler:remove_iq_handler(ejabberd_sm, Host, ?NS_YOUBAO_ONLINETIME).
+
+
+process_iq(From, To, IQ) ->
+    #iq{sub_el = SubEl} = IQ,
+    #jid{lserver = LServer} = From,
+    case lists:member(LServer, ?MYHOSTS) of
+	true ->
+	    process_local_iq(From, To, IQ);
+	_ ->
+	    IQ#iq{type = error, sub_el = [SubEl, ?ERR_ITEM_NOT_FOUND]}
+    end.
+
+process_local_iq(_From, _To, #iq{type = Type} = IQ) ->
+    case Type of
+	set ->
+            #iq{sub_el = SubEl} = IQ,         
+            IQ#iq{type = error, sub_el = [SubEl, ?STANZA_ERROR("404", "cancel", "can-not-set-onlinetime")]}; 
+	get ->
+            IQ#iq{type = result, sub_el = [?STANZA_ONLINETIME("12345")]} %% TODO: 应该从DB获取在线时间:)
+    end.
+
+<2> 修改ejabberd.cfg中的modules模块, 配置启动新增的模块:
+{mod_youbao_recommend, []}.
+
+<3> ejabberd中IQ-stanza的消息处理流程
+C2S -> Route -> Local Route -> SM -> 根据xmlns选择对应的IQ-Handler(mod_youbao_onlinetime)来处理 
+-> Route -> Local Route -> SM -> C2S
+
+
+
