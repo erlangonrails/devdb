@@ -1,0 +1,19 @@
+youbao私有的用户在线时间查询接口
+
+1. 协议规定:
+a. 新增的命名空间是: youbao:xmpp:onlinetime
+b. 返回的在线时间是分钟
+
+<1> C -> S (user2想查询user1的在线时间)
+<iq type='get' to='user1@91youbao.com' from='user2@91youbao.com' id='v1'>
+  <query xmlns='youbao:xmpp:onlinetime'/>
+</iq>
+
+<2> S -> C (服务器返回结果)
+(如果没有用户在线时间的统计, 则返回0)
+<iq xmlns="jabber:client" from="user2@91youbao.com" 
+    to="user1@91youbao.com/exmpp#1277866988908261" id="v1" type="result">
+  <query xmlns="youbao:xmpp:onlinetime">
+    <onlinetime>12345</onlinetime>
+  </query>
+</iq>
