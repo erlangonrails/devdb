@@ -1,8 +1,0 @@
-e2d_store
-
-1. 这个模块的本质是根据配置文件, 调用后端的存储引擎来存储/获取数据.
-如e2d_store_mnesia作为存储引擎.
-
-2. 模块初始化:
-该模块启动的时候, 会根据存储引擎Handler:buckets()返回的所有buicket_id()
-为每个bucket构造一个merkle tree.
