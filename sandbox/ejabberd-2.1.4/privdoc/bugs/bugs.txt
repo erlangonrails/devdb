@@ -1,0 +1,114 @@
+
+
+===================================================================
+ID: 1
+State: Active
+CreateDate: 2010/7/1
+CloseDate: 2010/7/1
+Description: ejabberd redis driver驱动在大约5分钟内如果没有做任何数据操作, 
+             会自动关闭TCP链接
+Solution: Fixed
+===================================================================
+详细描述:
+ejabberd服务器启动, 没有任何客户端操作, 大约5分钟后TCP链接断开. 
+下面是ejabberd.log中的详细信息, 因为我们的redis connection pool配置了6个TCP链接,
+所以会有6条** tcp_closed的消息.
+
+解决方式:
+修改redis.conf, redis的配置文件中有如下的配置, 设置了如果客户端一定时间内空闲, 会断开
+TCP链接, 我们原来使用默认的配置300秒, 也就是大约5分钟.
+现在配置这个时间为0, 也就是取消自动断开客户端链接的约束.
+# Close the connection after a client is idle for N seconds (0 to disable)
+timeout 0
+
+ejabberd.log
+=INFO REPORT==== 2010-07-01 10:12:33 ===
+I(<0.38.0>:ejabberd_app:70) : ejabberd 2.1.4 is started in the node ejabberd@localhost
+
+=ERROR REPORT==== 2010-07-01 10:17:41 ===
+ (redis_client:256) [**E**]socket closed by remote peer
+=ERROR REPORT==== 2010-07-01 10:17:41 ===
+** Generic server redis_client_localhost_6379_1 terminating 
+** Last message in was {tcp_closed,#Port<0.3362>}
+** When Server state == {state,
+                            {"localhost",6379},
+                            #Port<0.3362>,0,normal,
+                            {pubsub,undefined,undefined,undefined,undefined,
+                                undefined}}
+** Reason for termination == 
+** tcp_closed
+
+=ERROR REPORT==== 2010-07-01 10:17:41 ===
+ (redis_client:256) [**E**]socket closed by remote peer
+=ERROR REPORT==== 2010-07-01 10:17:41 ===
+** Generic server redis_client_localhost_6379_2 terminating 
+** Last message in was {tcp_closed,#Port<0.3365>}
+** When Server state == {state,
+                            {"localhost",6379},
+                            #Port<0.3365>,0,normal,
+                            {pubsub,undefined,undefined,undefined,undefined,
+                                undefined}}
+** Reason for termination == 
+** tcp_closed
+
+=ERROR REPORT==== 2010-07-01 10:17:41 ===
+ (redis_client:256) [**E**]socket closed by remote peer
+=ERROR REPORT==== 2010-07-01 10:17:41 ===
+** Generic server redis_client_localhost_6379_3 terminating 
+** Last message in was {tcp_closed,#Port<0.3366>}
+** When Server state == {state,
+                            {"localhost",6379},
+                            #Port<0.3366>,0,normal,
+                            {pubsub,undefined,undefined,undefined,undefined,
+                                undefined}}
+** Reason for termination == 
+** tcp_closed
+
+=ERROR REPORT==== 2010-07-01 10:17:41 ===
+ (redis_client:256) [**E**]socket closed by remote peer
+=ERROR REPORT==== 2010-07-01 10:17:41 ===
+** Generic server redis_client_localhost_6379_4 terminating 
+** Last message in was {tcp_closed,#Port<0.3367>}
+** When Server state == {state,
+                            {"localhost",6379},
+                            #Port<0.3367>,0,normal,
+                            {pubsub,undefined,undefined,undefined,undefined,
+                                undefined}}
+** Reason for termination == 
+** tcp_closed
+
+=ERROR REPORT==== 2010-07-01 10:17:41 ===
+ (redis_client:256) [**E**]socket closed by remote peer
+=ERROR REPORT==== 2010-07-01 10:17:41 ===
+** Generic server redis_client_localhost_6379_5 terminating 
+** Last message in was {tcp_closed,#Port<0.3368>}
+** When Server state == {state,
+                            {"localhost",6379},
+                            #Port<0.3368>,0,normal,
+                            {pubsub,undefined,undefined,undefined,undefined,
+                                undefined}}
+** Reason for termination == 
+** tcp_closed
+
+=ERROR REPORT==== 2010-07-01 10:17:41 ===
+ (redis_client:256) [**E**]socket closed by remote peer
+=ERROR REPORT==== 2010-07-01 10:17:41 ===
+** Generic server redis_client_localhost_6379_6 terminating 
+** Last message in was {tcp_closed,#Port<0.3369>}
+** When Server state == {state,
+                            {"localhost",6379},
+                            #Port<0.3369>,0,normal,
+                            {pubsub,undefined,undefined,undefined,undefined,
+                                undefined}}
+** Reason for termination == 
+** tcp_closed
+
+
+===================================================================
+ID: 2
+State: Active
+CreateDate: 
+CloseDate:
+Description:
+===================================================================
+
