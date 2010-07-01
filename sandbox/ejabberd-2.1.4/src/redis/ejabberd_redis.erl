@@ -10,6 +10,8 @@
 -behaviour(gen_server).
 
 %% API
+-export([ping/0,
+	 delete/1]).
 -export([set/2,
 	 set/3,
 	 get/1]).
@@ -27,6 +29,19 @@
 	 terminate/2, code_change/3]).
 
 -record(state, {host, port, count}).
+
+%%------------------------------------------------------------------------------
+%% generic commands
+%%------------------------------------------------------------------------------
+%% -spec ping() -> 'ok' | {'error', [atom()]}.
+ping() ->
+    Redis = get_redis(),
+    Redis:ping().
+
+%% -spec delete(Keys :: [key()]) -> boolean().
+delete(Key) ->
+    Redis = get_redis(),
+    Redis:delete(Key).
 
 %%------------------------------------------------------------------------------
 %% string commands 
@@ -65,7 +80,7 @@ set_members(Key) ->
     Redis = get_redis(),
     Redis:set_members(Key).
 
-%% -spec set_random_member(Key :: key()) -> value().
+%% -spec set_random_member(Key :: key()) -> value() | null()
 set_random_member(Key) ->
     Redis = get_redis(),
     Redis:set_random_member(Key).

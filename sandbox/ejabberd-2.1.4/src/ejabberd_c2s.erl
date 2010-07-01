@@ -98,7 +98,8 @@
 		ip,
 		lang,
 	        logintime,
-                logouttime}).
+                logouttime,
+                recommend_info = {{"", ""}, []}}).
 
 %-define(DBGFSM, true).
 
@@ -506,9 +507,9 @@ wait_for_auth({xmlstreamelement, El}, StateData) ->
 					     pres_f = ?SETS:from_list(Fs1),
 					     pres_t = ?SETS:from_list(Ts1),
 					     privacy_list = PrivList},
-                            youbao_login_hook(NewStateData),
+                            RecommendInfo = youbao_login_hook(NewStateData),
 			    fsm_next_state_pack(session_established,
-                                                NewStateData);
+                                                NewStateData#state{recommend_info = RecommendInfo});
 			_ ->
 			    ?INFO_MSG(
 			       "(~w) Failed legacy authentication for ~s",
@@ -873,9 +874,9 @@ wait_for_session({xmlstreamelement, El}, StateData) ->
 				     pres_f = ?SETS:from_list(Fs1),
 				     pres_t = ?SETS:from_list(Ts1),
 				     privacy_list = PrivList},
-                    youbao_login_hook(NewStateData),
+                    RecommendInfo = youbao_login_hook(NewStateData),
 		    fsm_next_state_pack(session_established,
-                                        NewStateData);
+                                        NewStateData#state{recommend_info = RecommendInfo});
 		_ ->
 		    ejabberd_hooks:run(forbidden_session_hook,
 				       StateData#state.server, [JID]),
@@ -2299,11 +2300,12 @@ pack_string(String, Pack) ->
 youbao_login_hook(State) ->
     JID = State#state.jid,
     youbao_online_ip:set_online_ip(JID#jid.lserver, JID#jid.luser, youbao_format_ip(State#state.ip), login),
+    RecommendInfo = youbao_recommend:add_to_index(JID#jid.lserver, JID#jid.luser),
     ?INFO_MSG("#youbao#(~w) ~s:~s login success", 
 			       [State#state.socket, 
 			       jlib:jid_to_string(jlib:jid_remove_resource(JID)),  %% without resource
 			       jlib:jid_to_string(JID)]),                          %% with resource
-    ok.
+    RecommendInfo.
 
 youbao_logout_hook(State) ->
     JID = State#state.jid,
@@ -2311,6 +2313,7 @@ youbao_logout_hook(State) ->
     youbao_onlinetime:set_onlinetime(JID#jid.lserver, JID#jid.luser, State#state.logintime),
     youbao_online_ip:set_online_ip(JID#jid.lserver, JID#jid.luser, IpStr, logout),
     youbao_session_log:set_session_log(JID#jid.lserver, JID#jid.luser, IpStr, State#state.logintime),
+    youbao_recommend:delete_from_index(JID#jid.lserver, JID#jid.luser, State#state.recommend_info),
     ?INFO_MSG("#youbao#(~w) ~s:~s logout", 
 	                     [State#state.socket, 
 		             jlib:jid_to_string(jlib:jid_remove_resource(JID)),  %% without resource

@@ -17,7 +17,7 @@ c. 使用Redis和MySQL存储数据的一点区别:
    ii. 存储数据到redis
    SVCARD = lists:flatten(xml:element_to_string(VCARD))
 
-d. 我们存储redis的时候, 使用的Key是: "svcard_" ++ LUsername
+d. 我们存储redis的时候, 使用的Key是: "svcard:" ++ LUsername
    例如:
    user1@91youbao.com, 对应的VCard-Key是svcard_user1
 

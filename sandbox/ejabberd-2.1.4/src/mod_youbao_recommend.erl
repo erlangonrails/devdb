@@ -99,14 +99,15 @@ handle_info({route, From, To, Packet}, State) ->
 		  "" ->
 		      jlib:make_error_reply(Packet, ?ERR_BAD_REQUEST);
 		  _ ->
-		      Users = <<"recommend-list">>, %% TODO:
+                      Users = youbao_recommend:get_recommend(From#jid.lserver, From#jid.luser),
 		      ID = xml:get_tag_attr_s("id", Packet),
+
 		      NewPacket = {xmlelement,"iq", [{"type","result"},
                                                      {"to", jlib:jid_to_string(From)},
                                                      {"from",jlib:jid_to_string(To)},
                                                      {"id",ID}],
                                                     [{xmlelement,"query",[{"xmlns","youbao:xmpp:recommend"}],
-						      [{xmlelement, "recommend", [],[{xmlcdata, Users}]}]}]},
+						     users_to_xml(Users)}]},
 		      NewPacket
                end,
     ejabberd_router:route(To, From, Packet2),
@@ -135,3 +136,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%--------------------------------------------------------------------
 %%% Internal functions
 %%--------------------------------------------------------------------
+users_to_xml(Users) ->
+    lists:map(fun(Item) ->
+	          {xmlelement, "item", [{"jid", Item}],[]}
+              end, Users).

@@ -422,7 +422,7 @@ set_vcard(LServer, LUsername, SBDay, SCTRY, SEMail, SFN, SFamily, SGiven,
 	  SNickname, SOrgName, SOrgUnit, SVCARD, Username) ->
 
     %% redis存储vcard信息
-    RedisKey = "svcard_" ++ LUsername,
+    RedisKey = "vcard:" ++ LUsername,
     ejabberd_redis:set(RedisKey, SVCARD),
 
     ejabberd_odbc:sql_transaction(
@@ -449,7 +449,7 @@ set_vcard(LServer, LUsername, SBDay, SCTRY, SEMail, SFN, SFamily, SGiven,
 %% 从redis获取vcard的内容:
 %% (兼容MySQL Driver的返回值格式)
 get_vcard(_LServer, Username) ->
-    RedisKey = "svcard_" ++ Username,
+    RedisKey = "svcard:" ++ Username,
     case ejabberd_redis:get(RedisKey) of
 	null ->
 	    {selected, ["vcard"], []};
