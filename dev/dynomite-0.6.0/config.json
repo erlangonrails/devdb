@@ -1,0 +1,15 @@
+{
+  "blocksize": 4096,
+  "text_port": 11222,
+  "thrift_port": 9200,
+  "web_port": 8080,
+  "buffered_writes": true,
+  "directory": "/tmp/data",
+  "storage_mod": "fs_storage",
+  "n": 1,
+  "r": 1,
+  "w": 1,
+  "q": 6,
+  "cache": false,
+  "cache_size": 128000
+}
