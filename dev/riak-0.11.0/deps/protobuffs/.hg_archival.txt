@@ -1,0 +1,4 @@
+repo: 484886f7bad51d1447a34fd32e45568cc51b35e4
+node: 4bb2e333c0093c4eb5cc6186fbb420d8a98b66b8
+branch: default
+tag: protobuffs-0.5.0

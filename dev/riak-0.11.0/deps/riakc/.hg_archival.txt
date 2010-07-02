@@ -1,0 +1,4 @@
+repo: f6d6aa8ddf2bea0dc880c07413fb40fd5feb2dd7
+node: a03bdcea36fabb8354b8af4a24ef6b1e5887ce88
+branch: default
+tag: riakc-0.2.0

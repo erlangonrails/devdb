@@ -1,0 +1,4 @@
+repo: d44a53e121d76a881990fd87c62401cfbd9c592d
+node: 7c84be60d99f57a7abe01c6b8d6d0410be7cac11
+branch: default
+tag: bitcask-1.0.1

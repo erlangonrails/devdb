@@ -1,0 +1,4 @@
+repo: a65f14dec9b45460f2e5886ec569600a9f0d6637
+node: 7594505914827d9b4e2241c072c686f588fd2360
+branch: default
+tag: erlang_js-0.3

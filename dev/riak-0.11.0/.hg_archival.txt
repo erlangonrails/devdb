@@ -1,0 +1,5 @@
+repo: 1c37b76aea4b70b445e687890c921498dd86b2d9
+node: 01bde3096b78378132520996257a81b5758db754
+branch: default
+latesttag: riak-0.11.0
+latesttagdistance: 1

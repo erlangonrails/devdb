@@ -1,0 +1,4 @@
+repo: e68ae3bcc0908e5d9e26c99dd058c00bb4ca0298
+node: ebf0964397e9951975d7b1eca97c6352bff7e0ed
+branch: default
+tag: webmachine-1.6.1
