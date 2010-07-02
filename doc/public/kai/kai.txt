@@ -1,0 +1,400 @@
+介绍Kai这个项目的原理
+
+
+==============================================================
+1. 配置信息
+<1> 配置信息的存储位置?
+配置信息存储在"kai.app中的env部分"和"kai.config"中, kai.config中的配置会覆盖kai.app中的默认配置
+erl -config kai
+
+<2> 配置信息如何获取?
+使用kai.erl中的下面API获取配置信息:
+config([], Acc) ->
+    Acc;
+config([Key|Rest], Acc) ->
+    case application:get_env(kai, Key) of
+        undefined   -> config(Rest, Acc);
+        {ok, Value} -> config(Rest, [{Key, Value}|Acc])
+    end.
+
+调用config/2获取配置信息Args, Args是一个proplists.
+Args = config([
+        logfile, hostname,
+        rpc_port, rpc_max_processes,
+        memcache_port, memcache_max_processes,
+        max_connections,
+        n, r, w,
+        number_of_buckets, number_of_virtual_nodes,
+        store, dets_dir, number_of_tables
+       ], []).
+
+Args会作为参数传递给kai_config模块作为该模块的启动参数:
+kai_config:start_link(Args).
+
+<3> kai_config模块如何处理配置信息?
+会把Args中所有的配置信息写入到config的ets表中, 这个表是(set + private + named_table)类型
+的表, 只有kai_config进程可以访问, 也就是其它进程要获取配置信息, 只能通过kai_config模块提供
+的外部API访问, 不能直接读取ets表.
+
+补充:
+a. node: 根据配置文件中的hostname和rpc_port计算组合获得的, {node, {Address, Port}}.
+   例如:
+   {hostname, "localhost"}, {rpc_port, 11011}
+   我们会写下面条记录到config表中:
+   {node, {{127,0,0,1}, 11011}} %% 注意: 是erlang格式的IP Address :)
+
+b. number_of_buckets: 
+   目的是把配置文件中的这个数据更新成一个'就近'的2的整数次方, 然后写入config表中.
+
+   会根据配置文件中的number_of_buckets重新计算, 算法如下:
+   对数定义:
+   X^Y = a 则log(X)(a) = Y, 如果X的Y次方为a, 则以X为底, a的对数是Y. X为"底数", a称作"真数".
+   性质, 换底公式:
+   log(a)(b) = log(m)(b)/log(m)(a)
+
+   math:log(Data)计算的是log(e)(Data)的价值, 底数是e, 我们要进行转化:
+   
+   原理是: log(e)(Data)/log(e)(2) = log(2)(Data)
+   代码:
+   NumberOfBuckets = proplists:get_value(number_of_buckets, Args), %% E.g. 1024
+   Exponent = round( math:log(NumberOfBuckets) / math:log(2)), %% 转换成log(2)(Exponent) = NumberOfBuckets这样的形式,
+                                                               %% 也就是2的多少次方等于NumberOfBuckets.
+   ets:insert(config, {number_of_buckets, trunc( math:pow(2, Exponent) )}), %% 更新NumberOfBuckets, 使之转换成一个2的整数次方
+                                                                            %% 的数据
+
+<4> kai_config提供的对外APIs:
+通过下面方式, 可以一次获取一个或多个配置项的信息, 比较灵活 :)
+do_get(Key) ->
+    case ets:lookup(config, Key) of
+        [{Key, Value}|_] -> Value;
+        _                -> undefined
+    end.
+
+do_get([], ListOfValues) ->
+    lists:reverse(ListOfValues);
+do_get([Key|Rest], ListOfValues) ->
+    do_get(Rest, [do_get(Key)|ListOfValues]).
+
+调用方式:
+do_get(rpc_port) -> 11011
+do_get([rpc_port, rpc_max_processes, undefinedkey], []) -> [11011, 30, undefined]
+
+例如:
+$kai.app
+{application, kai, 
+ [......
+  {env, [
+      {rpc_port, 11011},
+      {rpc_max_processes, 30},
+      {memcache_port, 11211},
+      {memcache_max_processes, 10},
+      {max_connections, 32},
+      {n, 3}, {r, 2}, {w, 2},
+      {number_of_buckets, 1024},
+      {number_of_virtual_nodes, 128},
+      {store, ets},
+      {number_of_tables, 256}
+  ]}
+ ]}.
+
+$kai.config
+[{kai, [
+    {logfile, "kai.log"},
+    {hostname, "localhost"},
+    {rpc_port, 11011},
+    {rpc_max_processes, 30},
+    {memcache_port, 11211},
+    {memcache_max_processes, 10},
+    {max_connections, 32},
+    {n, 3},
+    {r, 2},
+    {w, 2},
+    {number_of_buckets, 1024},
+    {number_of_virtual_nodes, 128},
+    {store, ets},
+    {dets_dir, "/path/to/dir"},
+    {number_of_tables, 256}
+]}].
+
+
+==============================================================
+2. 日志
+<1> 宏定义
+-define(error  (Data), kai_log:log(error, self(), ?FILE, ?LINE, Data)).
+-define(warning(Data), kai_log:log(warning, self(), ?FILE, ?LINE, Data)).
+-define(info   (Data), kai_log:log(info, self(), ?FILE, ?LINE, Data)).
+
+<2> kai_log是一个gen_server的日志模块, 记录日志的核心逻辑:
+a. 如果配置信息中定义了日志文件, 此时gen_server的State = [{fd, Fd}],
+   则会把日志记录到日志文件.
+b. 如果配置信息中没定义日志文件, 此时gen_server的State = [], 会写日志到标准输出.
+
+log(Type, Pid, File, Line, Data, State) ->
+    {{Year,Month,Day}, {Hour,Minute,Second}} = erlang:localtime(),
+    {_MegaSec, _Sec, Usec} = now(),
+    Data2 =
+        if
+            is_list(Data) -> lists:flatten(Data);
+            true          -> Data
+        end,
+    Buf = io_lib:format(
+        "~4..0w-~2..0w-~2..0w ~2..0w:~2..0w:~2..0w.~6..0w [~s] (~p) ~s:~w: ~p\n",
+        [Year, Month, Day, Hour, Minute, Second, Usec, Type, Pid, File, Line, Data2]
+    ),
+    case proplists:get_value(fd, State) of
+        undefined -> io:format(    "~s", [Buf]);  %% 标准输出
+        Fd        -> io:format(Fd, "~s", [Buf])   %% 日志文件
+    end. 
+
+
+=============================================================
+3. 可配置的存储'引擎': kai_store_dets和kai_store_ets
+设计下面三个模块:
+kai_store
+kai_store_dets
+kai_store_ets
+存储的数据结构类型定义在kai.hrl中:
+-record(data, {
+    key, bucket, last_modified, vector_clocks, checksum, flags, value
+}).
+
+<1> kai_store_ets, 使用ets表来存储data.
+GET/PUT/DEL对应的逻辑代码:
+ets:new(kai_store_ets, [set, private, named_table, {keypos, 2}]). %% 初始化一个ets表, 注意: 存储record的时候keypos的位置为2, 
+                                                                  %% 因为keypos为1的位置存储的是record的名字, 在这里也就是data.
+ets:insert(kai_store_ets, #data{key = key1}).  %% PUT
+ets:lookup(kai_store_ets, key1).               %% GET
+ets:delete(kai_store_ets, key1).               %% DEL
+
+实现代码:
+要注意的一点就是在PUT的时候, 要先使用vclock进行版本比对, 合理的版本才可以写入, 否则返回一个错误 :)
+do_get(#data{key=Key} = _Data, State) ->
+    case ets:lookup(?MODULE, Key) of
+        [Data] -> {reply, Data, State};
+        _      -> {reply, undefined, State}
+    end.
+
+do_put(Data, State) when is_record(Data, data) ->
+    case ets:lookup(?MODULE, Data#data.key) of
+        [StoredData] ->
+            case vclock:descends(Data#data.vector_clocks, StoredData#data.vector_clocks) of
+                true -> insert_and_reply(Data, State);
+                _ -> {reply, {error, "stale or concurrent state found in kai_store"}, State}
+            end;
+        _ -> insert_and_reply(Data, State)
+    end;
+do_put(a, b) -> ok.
+
+insert_and_reply(Data, State) ->
+    ets:insert(?MODULE, Data),
+    {reply, ok, State}.
+
+do_delete(#data{key=Key} = _Data, State) ->
+    case ets:lookup(?MODULE, Key) of
+        [_Data2] ->
+            ets:delete(?MODULE, Key),
+            {reply, ok, State};
+        _ ->
+            {reply, undefined, State}
+    end.
+
+获取ets表的info信息, bytes - ets大概占用的字节数; size - ets中存储的object的数量.
+a. ets:info(Tab, size) -> The number of objects inserted in the table.
+b. ets:info(Tab, memory) -> he number of words allocated to the table.
+c. erlang:memory(binary) -> The total amount of memory currently allocated for binaries.
+                            This memory is part of the memory presented as system memory.
+d. erlang:system_info(wordsize) -> Returns the size of Erlang term words in bytes as an integer,
+                          i.e. on a 32-bit architecture 4 is returned, and on a pure 64-bit architecture 8 is returned. 
+                         
+
+实现:
+info(Name, State) ->
+    Value =
+        case Name of
+            bytes -> %% 返回ets表大概占用的字节数: 主要有两部分组合而成:ets memory + binary memory
+                % this code roughly estimates the size of stored objects,
+                % since ets only store a reference to the binary
+                Ets = erlang:system_info(wordsize) + ets:info(?MODULE, memory),
+                Bin = erlang:memory(binary),
+                Ets + Bin;
+            size -> %% 返回ets表中存储的objects的数目.
+                ets:info(?MODULE, size)
+        end,
+    {reply, Value, State}.
+
+
+list操作: 可以列出某个Bucket的所有数据的信息, 实现代码如下:
+do_list(Bucket, State) ->
+    Head = #data{
+        key           = '$1',
+        bucket        = Bucket,
+        last_modified = '$2',
+        vector_clocks = '$3', 
+        checksum      = '$4',
+        flags         = '_',
+        value         = '_'
+    },
+    Cond = [],
+    Body = [{#data{
+        key           = '$1',
+        bucket        = Bucket,
+        last_modified = '$2',
+        vector_clocks = '$3',
+        checksum      = '$4'
+    }}],
+    ListOfData = ets:select(?MODULE, [{Head, Cond, Body}]),
+    {reply, {list_of_data, ListOfData}, State}.
+
+<2> kai_store_dets, 使用dets表来存储data.
+这个模块与kai_store_ets模块不同, ets模块中不同Buckets的数据都存储在一个ets表中,
+通过#data.bucket来区分.
+dets会根据配置文件创建多个dets表, 不同的buckets的数据会映射到不同的dets表中存储.
+
+例如有如下的配置信息:
+{dets_dir, "/path/to/dir"},
+{number_of_tables, 256}
+我们会在/path/to/dir目录下创建256个dets表, 关系是:
+name                -   file
+kai_store_dets_1    -   /path/to/dir/1
+kai_store_dets_2    -   /path/to/dir/2
+kai_store_dets_3    -   /path/to/dir/3
+......
+kai_store_dets_256  -   /path/to/dir/256
+
+GET/PUT/DEL对应的逻辑代码:
+dets:open_file(kai_store_dets_1, [{type, set}, {keypos, 2}, {file, /path/to/dir/1}]). %% 创建一个名字是kai_store_dets_1的dets表,
+                                                                                      %% 存储在/path/to/dir/1这个文件中
+ets:insert(kai_store_dets_1, #data{key = key1}).  %% PUT
+ets:lookup(kai_store_dets_1, key1).               %% GET
+ets:delete(kai_store_dets_1, key1).               %% DEL
+
+数据从Bucket -> dets表的映射
+这个模块也是一个gen_server, State存储的是如下结构:
+#state{number_of_tables = 256, [{1, kai_store_dets_1}, {2, kai_store_dets_2}, ...]}
+映射方式: 通过下面函数可以根据Bucket获取它对应的dets表的名称.
+bucket_to_table(Bucket, State) ->
+    I = Bucket rem State#state.number_of_tables + 1,  %% 注意: 需要加1 :)
+    proplists:get_value(I, State#state.tables).
+
+通过bucket_to_table(Bucket, State)获得对应的dets表名的时候, PUT/GET/DEL操作以及LIST操作和ets表的逻辑是一样的.
+唯一一点区别是每次PUT/DEL操作成功后, 调用dets:sync(Tab)来强制将数据写到disk上.
+
+获取ets表的info信息, bytes - ets大概占用的字节数; size - ets中存储的object的数量.
+a. dets:info(file_size) - the size of the file in bytes.
+b. dets:info(size) - the number of objects stored in the table.
+
+info(Name, State) ->
+    Values =
+        lists:map(
+          fun(I) ->
+                  T = proplists:get_value(I, State#state.tables),
+                  case Name of
+                      bytes -> dets:info(T, file_size);
+                      size  -> dets:info(T, size)
+                  end
+          end,
+          lists:seq(1, State#state.number_of_tables)
+         ),
+    {reply, lists:sum(Values), State}.
+
+<3> kai_store模块
+根据配置的信息选用合适的后端存储模块ets或者dets:
+例如: 下面配置信息, 我们将使用kai_store_ets来存储数据.
+{store, ets}
+
+提供了: GET/PUT/DEL/LIST/INFO接口
+
+
+=============================================================
+4. 版本信息vclock和kai_version
+<1> vclock
+这个模块实现了Vector Clock, 用来在多个节点间进行数据的同步.
+
+关键是理解这两个数据结构, 以及理解后代descend的含义, 如果Va是Vb的后代,
+则Vb中所有的vc_entry在Va中都包含, 并且Va中的vc_entry的counter要大于或者等于Vb中
+的vc_entry.
+
+a. vc_entry
+   node是节点的名称, 也是vc_entry的标识.
+   counter是版本号, 数字越大, 版本越新
+   stamp是节点最新的访问时间, 也就是最新版本更新的时间.
+b. vclock是vc_entry的列表
+
+数据类型的定义:
+@type vclock() = [vc_entry].
+@type vc_entry() = {node(), {counter(), timestamp()}}.
+The timestamp is present but not used, in case a client wishes to inspect it.
+@type node() = term().
+Nodes can have any term() as a name, but they must differ from each other.
+@type counter() = integer().
+@type timestamp() = integer().
+
+
+测试代码:
+test_vclock() ->
+    A = vclock:fresh(), %% 创建一个新的vclock
+    B = vclock:fresh(),
+    A1 = vclock:increment(a, A), %% 新增或者更新一个vc_entry
+    B1 = vclock:increment(b, B),
+
+    true = vclock:descends(A1,A), %% 判断A1是否为A的后代
+    true = vclock:descends(B1,B),
+    false = vclock:descends(A1,B1),
+    A2 = vclock:increment(a, A1),
+
+    C = vclock:merge([A2, B1]),  %% Merge两个vclock, 如果两个vclock有相同的vc_entry, 
+                                 %% 选择counter大的(也就是优先选择后代). 这个行为和下面的API一样:
+                                 %% extend(VC_Entry :: VC_Entry, VClock :: vclock()) -> vclock()
+    C1 = vclock:increment(c, C),
+    true = vclock:descends(C1, A2),
+    true = vclock:descends(C1, B1),
+    false = vclock:descends(B1, C1),
+    false = vclock:descends(B1, A1),
+    ok.
+
+<2>kai_version
+
+
+=============================================================
+5.  kai_connection
+
+
+=============================================================
+6. kai_tcp_server_monitor
+<1> 是一个独立的监控模块, 可以注册一个pid到这个模块, 然后该模块就开始监控注册过的pid, 当注册的pid死掉后, 
+    该模块会收到{'Down', ...}消息.
+    核心原理是:
+    erlang:monitor(process, Pid) -> MonitorRef
+    erlang:demonitor(MonitorRef) -> true
+    如果我们调用了erlang:monitor/2来监控一个进程, 如果这个监控进程死掉了, 监控进程会收到
+    下面一条消息:
+    {'DOWN', MonitorRef, process, Pid, _Info}
+   
+<2> 该模块是一个gen_server的结构, State保存了一个MonitorRef列表和一个Pids列表, 结构如下:
+    {MonitorRefs, Pids}.
+    State在初始化之后是: {[], []}
+
+<3> APIs:
+register(ServerRef, Pid) -> ok - 调用erlang:monitor/2监控这个Pid, 并把结果MonitorRef增加到State的MonitorRefs中
+increment(ServerRef, Pid) -> ok - 在State的Pids中'增加'这个Pid
+decrement(ServerRef, Pid) -> ok - 在State的Pids中'删除'这个Pid
+info(ServerRef, Key) -> ok - 目前只支持info(ServerRef, curr_connections), 返回当前Pids中的元素个数.
+
+=============================================================
+7. kai_tcp_server_acceptor
+
+
+=============================================================
+8. kai_tcp_server
+
+
+=============================================================
+9. kai_tcp_server_sup
+
+
+
+
+
+
+
+
