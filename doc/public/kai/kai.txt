@@ -369,6 +369,8 @@ test_vclock() ->
     如果我们调用了erlang:monitor/2来监控一个进程, 如果这个监控进程死掉了, 监控进程会收到
     下面一条消息:
     {'DOWN', MonitorRef, process, Pid, _Info}
+    收到这个消息之后, 会清理State中的MonitorRefs和Pids两个列表, 分别删除MonitorRef和Pid的信息.
+    因为这个进程已经死掉了.
    
 <2> 该模块是一个gen_server的结构, State保存了一个MonitorRef列表和一个Pids列表, 结构如下:
     {MonitorRefs, Pids}.
@@ -382,7 +384,90 @@ info(ServerRef, Key) -> ok - 目前只支持info(ServerRef, curr_connections), �
 
 =============================================================
 7. kai_tcp_server_acceptor
+<1> proc_lib:start/3和proc_lib:init_ack/2的关系:
+proc_lib:start_link/3是一个同步的启动一个新的process的函数, 当新的进程启动之后, '必须'调用init_ack/2来
+告诉父进程它已经成功启动, 否则父进程会一直等待.
+start_link/3的返回值就是init_ack(Parent, Ret)中的Ret.
 
+看下面的例子:
+-module(test).
+-export([start_link/0, init/1]).
+
+start_link() ->
+    proc_lib:start_link(?MODULE, init, [self()]),
+    io:format("start_link complete~n", []).
+
+init(Parent) ->
+    case do_init() of
+        ok ->
+            proc_lib:init_ack(Parent, {ok, self()}), %% 如果这行注视掉, test:start_link/0
+                                                     %% 永远不会打印start_link complete信息, 会一直等待.
+            ok;
+        {error, Reason} ->
+            exit(Reason)
+    end,
+    loop().
+
+do_init() ->
+    io:format("do_init done~n", []),
+    ok.
+
+loop() ->
+    receive
+	Msg ->
+	    io:format("loop#~p~n", [Msg]),
+	    loop
+    after 5000 ->
+        io:format("loop timeout...~n", []),
+        loop()
+    end.
+
+
+<2> 模块功能, 这个模块主要功能是:
+a. 接受客户端的连接gen_tcp:accept(ListenSock, Timeout).
+b. 如果是{active, false}型的Socket, 不断的调用gen_tcp:recv(Socket, Length, Timeout)
+   来接收数据. gen_tcp:recv/3会返回下面三类结果:
+   {ok, Data} 
+   {error, closed}
+   {error, Reason}
+c. 如果是{active, true}型的Socket, 主动接收下面三个消息:
+   {tcp, Socket, Data}
+   {tcp_closed, Socket}
+   {tcp_error, Socket, Reason}
+d. 当收到客户端发来的数据Data之后, 会调Mod:handle(Socket, Data, State)处理, 具体逻辑如下:
+流程: Recv -> Mod:handle_call/3 -> Recv -> Mod:handle_call/3 ....
+要注意的是Mod:handle_call/3的返回值的规定 :)
+
+call_mod(Active, Socket, Data, State, Mod, Option) ->
+    case Mod:handle_call(Socket, Data, State) of
+        {reply, DataToSend, State} ->
+            gen_tcp:send(Socket, DataToSend),
+            recv(Active, Socket, State, Mod, Option);
+        {noreply, State} ->
+            recv(Active, Socket, State, Mod, Option);
+        {close, State} ->
+            tcp_closed;
+        {close, DataToSend, State} ->
+            gen_tcp:send(Socket, DataToSend);
+        Other ->
+            ?warning(io_lib:format(
+                "call_mod(~p) ~p", [Mod, {unexpected_result, Other}]
+            ))
+    end.
+e. 要注意的是这个模块在'同一时间只能接受一个客户端的连接', 也就是当前如果有客户端已经连接过来,
+这个模块将不再接受其它客户端的连接, 只有当这个客户端断开连接之后(主动断开或者异常), 才会调用gen_tcp:accept/2来再次
+接受客户端的连接.
+f. 每次客户端有一个连接到来之后, 都会把当前进程的pid注册到kai_tcp_server_monitor中, 连接断开之后注销这个pid.
+所以统计kai_tcp_server_monitor中State的Pids列表的元素个数, 就可以知道当前并发的客户端数量.
+
+<3> API:
+start_link({Dest, Name}, ListenSocket, State, MonitorName, Mod, Option) 
+{Dest, Name}: {local, Name :: atom()} | {global, Name :: atom()} 
+ListenSocket: 侦听Socket
+State: Mod:handle_call(Socket, Data, State)的参数
+MonitorName: kai_tcp_server_monitor的名字
+Mod: 回调模块
+Option: 一些配置选项#tcp_server_option{}
 
 =============================================================
 8. kai_tcp_server
