@@ -382,6 +382,23 @@ increment(ServerRef, Pid) -> ok - 在State的Pids中'增加'这个Pid
 decrement(ServerRef, Pid) -> ok - 在State的Pids中'删除'这个Pid
 info(ServerRef, Key) -> ok - 目前只支持info(ServerRef, curr_connections), 返回当前Pids中的元素个数.
 
+<4> 补充:
+这个模块是来监控kai_tcp_server的, 一个monitor用来监控一类kai_tcp_server,
+例如kai_rpc和kai_memcache都是kai_tcp_server的实现, 我们会有两个monitor来分别监控它们.
+
+看下面的例子: kai.config
+{memcache_port, 11211}
+{memcache_max_processes, 6}  %% acceptor的数量, 也是最大的并发连接数量.
+我们会创建6个acceptor进程, 这些进程在创建的时候, 都会调用erlang:monitor(process, Pid)来注册到monitor,
+对应的API是kai_tcp_server_monitor:register/2; 也就是当kai程序启动之后, 会创建所有的acceptor进程, 并且这些
+acceptor进程都会注册到对应的monitor进程, 被monitor监控.
+当接收到一个客户端连接之后, 会调用kai_tcp_server_monitor:increment/2, 来注册这个进程到monitor State的Pids,
+当客户端连接断开之后, 会调用kai_tcp_server_monitor:decrement/2来注销这个Pids. 所以这就是为什么Pids表示当前
+并发的连接数.
+简单说:
+monitor的State.MonitorRefs等于配置文件中的xxx_max_processes的数量, 等于最大的并发链接数; State.Pids等于
+当前的并发连接数.
+
 =============================================================
 7. kai_tcp_server_acceptor
 <1> proc_lib:start/3和proc_lib:init_ack/2的关系:
@@ -471,10 +488,43 @@ Option: 一些配置选项#tcp_server_option{}
 
 =============================================================
 8. kai_tcp_server
-
+<1> 是一个自定义的behaviour, 该模块是一个TCP模块, 实现该模块的主要功能是处理
+TCP收到数据后的逻辑操作.
+要实现该模块, 需要实现下面两个接口:
+a. 初始化的时候调用
+Mod:init(Arg) -> {ok, State} 
+                 {stop, Reason} 
+                 Other
+b. 从Socket接收到数据Data的时候调用
+Mod:handle_call(Socket, Data, State) -> {reply, DataToSend, State}
+                                        {noreply, State}
+                                        {close, State}
+                                        {close, DataToSend, State}
+                                        Other
 
 =============================================================
 9. kai_tcp_server_sup
+<1> 该模块负责创建一个ListenSocket来侦听在一个特定的端口, 并且根据配置文件创建一些列的
+acceptor进程来接收客户端的连接. 同时还会创建一个monitor进程来监视这些acceptor进程.
+
+例如:kai.config
+{memcache_port, 11211}
+{memcache_max_processes, 6}  %% acceptor的数量, 也是最大的并发连接数量.
+kai_memcache实现了一个kai_tcp_server的行为模式, 会创建一个侦听在11211端口的
+ListenSocket, 并且创建6个acceptor进程来接收客户端的连接,同时创建一个monitor进程来监视
+这6个acceptor进程. 
+进程结构如入:
+                               kai_memcache
+                      /             |             \
+kai_memcache_monitor    kai_memcache_acceptor_1  ... kai_memcache_acceptor_6
+
+
+=============================================================
+10.
+
+=============================================================
+11.
+
 
 
 
