@@ -1,0 +1,37 @@
+#!/bin/sh
+
+###########################
+# Configuration
+###########################
+
+ERL=erl
+HOST=localhost
+
+###########################
+# End of configuration
+###########################
+
+
+NAME=myapp
+NODE=$NAME@$HOST
+ROOT="`dirname "$0"`"
+ROOT="`cd "$ROOT"/.. && pwd`"
+
+case "$1" in
+  start)
+	 $ERL -noinput -detached -sname $NODE \
+           -pa "$ROOT/ebin" -s myapp start
+	 sleep 2
+	 $0 status
+	 ;;
+  debug)
+         echo "Press any key to continue" 
+         read foo 
+         $ERL -sname myappdebug@$HOST -remsh $NODE \
+           -pa "$ROOT/ebin"
+         ;;
+      *)
+         $ERL -noinput -sname myappctl@$HOST \
+           -pa "$ROOT/ebin" -s myapp_ctl -extra $NODE $@
+         ;;
+esac
