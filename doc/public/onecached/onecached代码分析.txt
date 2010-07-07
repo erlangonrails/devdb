@@ -1,0 +1,179 @@
+OneCache是一个Erlang的memcached实现
+
+1. onecached_storage
+是OneCache目前的后端存储引擎, 使用Mnesia存储数据, 这个存储引擎是可以扩展的, 可以扩展成其它的可以高效读取的存储方式,
+比如redis等.
+
+<1> APIs:
+Key可以是list或者binary.
+Storage目前只支持mnesia.
+
+a. 存储数据: 
+   store_item(Storage, #stroage_command{})
+   目前的Storage只支持'mnesia', 将数据写入mnesia表onecached.
+   (Key和Data会转换成binary来存储), 成功返回ok.
+
+b. 检测数据是否存在:
+   has_item(Storage, Key)
+   如果Key对应的Item存在, 则返回true.
+
+c. 获取数据:
+   get_item(Storage, Key)
+   如果数据存在则返回{ok, {Flags, Data}}, 没找到则返回none,
+   发生错误返回{error, Reason}.
+   
+d. 删除数据:
+   delete_item(Storage, Key)
+   如果成功删除返回ok, 如果数据不存在返回none.
+   
+e. 更新数据:
+   update_item_value(Storage, Key, Value, Operation)
+   内部会调用Operation(OldValue, Value) -> NewValue, 将这个新的NewValue
+   写入到存储系统, 成功将返回{ok, NewValue}, 这通常用于自增或者自减操作.
+
+f. flush数据:
+   flush_items(Storage)
+   把所有的数据都删除.
+
+
+2. onecached_listener
+一个客户端Socket的接收器, 就是简单的创建(gen_tcp:listen/2)一个ListenSocket来侦听客户端
+的连接, 如果有新的连接到来, 简单的调用onecached_server:start(Socket)处理后, 继续接收
+(gen_tcp:accept(ListenSocket))客户端的连接. 这和ejabberd中接收客户端连接的模块的设计结构
+是一样的.
+
+3. onecached_server
+负责于客户端交互, 接收客户端发来的数据, 解析memcached协议, 调用存储引擎读取或者存储数据, 发送
+处理结果给客户端.
+<1> memcached是基于行的协议, 命令行以\r\n结尾, 如何从数据流(list)中解析出一行数据?
+基于文本行的协议都可以用这种方式来解析出一行数据.
+read_line("abc") -> "abc".
+read_line("abc\r\ndddd") -> {line, "abc", "dddd"}.
+
+实现:
+read_line(Data) ->
+    read_line(Data, "").
+read_line("", _Line) ->
+    noline;
+read_line("\r\n" ++ Data, Line) ->
+    {line, lists:reverse(Line), Data};
+read_line([Char|Data], Line) ->
+    read_line(Data, [Char | Line]).
+
+<2> memcached协议数据分为两类: 文本行数据和自由数据, 这两类数据都是用\r\n结尾的.
+我们如何从Socket中接收并解析出这些数据? 看下面的实现代码:
+不断的调用gen_tcp:recv/2接收数据, 每接收到一个数据包, 把上次解析剩下的数据和这次接收到的数据组合, 
+解析出其中的'行数据(可能是一行, 也可能是多行)', 解析完成后继续接收.
+
+%%  receive TCP packets
+%% 注意: 参数Data是上次process_packet解析完之后'剩下'的没有处理的数据, 继续处理.
+loop(FSM_Pid, Socket, Data) ->
+    %?DEBUG("loop ~p~n", [Socket]),
+    case gen_tcp:recv(Socket, 0) of
+	{ok, Packet} ->
+	    %?DEBUG("Packet Received~n~p~n", [Packet]),
+	    NewData = process_packet(FSM_Pid, Data++Packet), %% 处理: '上次解析剩下的数据' + '这次接收到的数据'
+	    loop(FSM_Pid, Socket, NewData); %% 注意: NewData是这次解析剩下的数据, 在收到下个数据包后'组合'使用.
+	{error, closed} ->
+	    ?DEBUG("closed~n", []),
+
+	    ok;
+	{error, Reason} ->
+	    ?ERROR_MSG("Error receiving on socket ~p: ~p~n", [Socket, Reason]),
+	    {error, Reason}
+    end.
+
+%% parse TCP packet to find lines, and send 'them' to the FSM
+%% 把解析出来的'一行'或者'多行'数据发送给FSM, 返回剩下的数据.
+process_packet(FSM_Pid, Data) ->
+    case read_line(Data) of
+	{line, Line, NewData} ->
+	    ?DEBUG("Line~n~p", [Line]),
+	    gen_fsm:send_event(FSM_Pid, {line, Line}), %% 把解析出来'一行数据'Line发送给有限状态机.
+	    process_packet(FSM_Pid, NewData);          %% 继续处理'剩下'的数据NewData
+	 noline ->
+	    Data
+    end.
+
+<3> 当前版本支持的命令有:
+set, add, replace, get, incr, decr, delete, flush_all, quit
+
+<4> 这个模块就是一个FSM, 有如下几个状态:
+a. process_command
+b. process_data_block
+c. discard_data_block
+当初始化之后, 进入process_command状态, 等待解析一个'行命令', 当Socket收到的数据经过<2>中的逻辑解析之后, 发送给FSM的
+process_command状态, 开始解析命令. 命令解析出来之后, 根据命令的状况：
+进入到process_data_block或者discard_data_block状态.
+例如:
+当解析出一个set key flags exptime bytes\r\n命令之后, 进入process_data_block状态等待接收数据, 当数据接收完成之后
+(接收到的数据长度等于bytes的描述), 则调用存储引擎存储数据, 发送STORED\r\n给客户端. 完成之后进入process_command状态. 
+
+当解析出一个add key flags exptime bytes\r\n命令之后, 我们需要先判断key对应的数据在存储引擎中是否存在, 如果存在, 则
+进入discard_data_block状态. 当数据接收完成之后(接收到的数据长度等于bytes的描述), 发送NOT_STORED\r\n给客户端, 再次进入
+process_command状态; 令一个逻辑, 如果key对应的数据在存储引擎中不存在, 则进入和上面set命令一样的逻辑, 进入到process_data_block
+状态, 存储数据, 发送STORED\r\n给客户端. 完成之后进入process_command状态.
+
+4. onecached_ctl
+<1> 该模块是为了搭配onecachedctl这个脚本来使用的, 是一种常用的linux shell和erlang交互的处理方式:
+a. 如何从erl命令行获取参数? 主要使用下面几个APIs
+   init:get_plain_arguments() -> [Arg]
+      Arg = string()
+   init:get_argument(Flag) -> {ok, Arg} | error
+      Flag = atom()
+      Arg = [Values]
+      Values = [string()]
+   Doc: Everything following -extra is considered plain arguments and can be retrieved using get_plain_arguments/0.
+
+   例如:
+   erl -key1 val1 -key2 val2-0 val2-1 -extra a b c d
+   init:get_plain_arguments() -> ["a","b","c","d"]
+   init:get_argument(key1) -> {ok,[["val1"]]}
+   init:get_argument(key2) -> {ok,[["val2-0","val2-1"]]}
+
+<2> 如何显示一个程序是否在运行?
+process(["status"]) ->
+    {InternalStatus, ProvidedStatus} = init:get_status(),
+    io:format("Node ~p is ~p. Status: ~p~n",
+              [node(), InternalStatus, ProvidedStatus]),
+    case lists:keysearch(onecached, 1, application:which_applications()) of
+        false ->
+            io:format("OneCached is not running~n", []),
+            ?STATUS_ERROR;
+        {value,_Version} ->
+            io:format("OneCached is running~n", []),
+            ?STATUS_SUCCESS
+    end
+
+<3> 如何停止/重启一个程序?
+init:stop()
+init:restart()
+
+要停止远程节点Node的程序, 可以这样调用:
+rpc:call(Node, init, stop, []).
+
+<4> 配合的linux shell脚本:
+erl一些参数:
+-noinput: Ensures that the Erlang runtime system never tries to read any input
+-detached: Starts the Erlang runtime system detached from the system console. Useful 
+           for running daemons and backgrounds processes
+-s: erl -s foo -s foo bar -s foo bar baz 1 2
+    foo:start()
+    foo:bar()
+    foo:bar([baz, '1', '2']) %% 参数看作: atom()
+
+下面的脚本可以调用onecached_ctl:start()处理, 里面的逻辑是调用init:get_plain_arguments()来解析出
+参数, 然后根据不同的参数, 调用rpc:call(Node, Module, Function, Args)来在远程节点(也就是onecached)
+运行的节点远程执行这些命令
+erl -noinput \
+    -sname onecachedctl@$HOST \
+    -pa "$ROOT/ebin" \
+    -s onecached_ctl -extra $NODE $@
+
+5. onecached程序组织:
+<1> onecached_sup 监控进程, 监控onecached这个application所需要运行的程序
+                  onecached_listener
+    onecached_app 负责启动onecached这个application
+    onecached     负责启动onecached所依赖的applications.
+
+
