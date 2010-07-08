@@ -1,0 +1,43 @@
+1. escript
+<1>提供了一种无须编译就可以运行Erlang程序的方式, 并且可以方便的从命令行获取参数.
+<2>escript必须包含main/1, 当脚本运行的时候所附加的所有参数都将以string()的形式
+   传递给main/1来执行.
+
+2. 一个基本的escript的例子: 
+
+$myscript
+#!/usr/bin/env escript
+main(["fac", M]) ->
+    M1 = list_to_integer(M),
+    io:format("fac ~w = ~w~n", [M1, fac(M1)]);
+main(["add", M, N]) ->
+    M1 = list_to_integer(M),
+    N1 = list_to_integer(N),
+    io:format("add ~w + ~w = ~w~n", [M1, N1, add(M1, N1)]);
+main(_) ->
+    usage().
+
+usage() ->
+    io:format("usage: TODO\n"),
+    halt(1).
+
+add(M, N) -> M + N.
+
+fac(0) ->1;
+fac(N) -> N * fac(N - 1).
+
+
+<1> 要注意程序的第一行是interpreter line, 是解释程序的行, 负责调用escript.
+    这一行并不是必须的.
+    a. 如果不包含这行, 我们可以运行:
+       escript myscript fac 10
+    b. 如果包含第一行, 直接运行:
+       myscript fac 10
+
+<2> 在linux平台上, myscript必须设置执行位, 否则不会执行.
+ 
+<3> Erlang script必须包含main/1, 一个erlang script执行的时候会调用main/1.
+    所有的参数都看作string().
+
+<4> 关于script的返回值, 如果main/1成功, 返回状态码0;
+    如果产生异常, 返回127, 我们也可以使用halt(1)来自定义我们的返回值.
