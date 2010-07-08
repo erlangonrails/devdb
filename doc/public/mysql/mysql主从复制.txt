@@ -1,0 +1,96 @@
+MySQL主从复制配置文档
+
+
+1. 如何配置MySQL主服务器(Master)?
+-------------------------------------
+server-id = 1             # mysql服务器标示, 通常设置Master为1
+log-bin = mysql-bin-youbao-master
+binlog-do-db = ejabberd   # 需要备份的数据库名, 可以写多行
+binlog-ignore-db = mysql  # 不需要备份的数据库名, 可以写多行
+-------------------------------------
+
+这样配置之后, 重启mysqld服务生效后, 会在/var/lib/mysql目录下
+看到下列二进制的日志文件, Slave通过这些日志文件进行同步.
+mysql-bin-youbao-master.000001
+mysql-bin-youbao-master.000002
+.....
+mysql-bin-youbao-master.index
+
+2. 在MySQL主数据库上创建同步数据的用户, 并赋予用户权限, 这个用户在配置Slave的时候需要
+把这个用户信息写入MySQL Slave的配置文件中.
+-------------------------------------
+mysql>insert into mysql.user(host, user, password)
+          values("%", "useranme", password("pwd"));
+mysql>grant all privileges on *.* to 'username'@'%' identified by 'pwd';
+mysql>flush privileges;
+-------------------------------------
+
+3. 如何配置MySQL从服务器(Slave)?
+-------------------------------------
+server-id = 2
+log-bin = mysql-bin-youbao-slave
+master-host = xxx.xxx.xxx.xxx
+master-user = username
+master-password = password
+master-port = 3306
+replicate-do-db = ejabberd  #需要同步的数据库名, 可以写多行
+replicate-ignore-db = mysql #不需要同步的数据库名, 可以写多行
+slave-skip-errors=all       # 忽略错误
+-------------------------------------
+
+注意!!!
+修改配置需要注意需要删除从服务器上的/var/lib/mysql/master.info文件,
+重新启动后会生成新的配置, 否则新的配置无法生效.
+
+4. 在启动Master/Slave同步之前, 需要先手动同步Master和Slave数据库.
+-------------------------------------
+Master服务器上备份数据:
+mysqldump --add-drop-table -u username -p ejabberd > ejabberd.bak
+
+Slave服务器上同步数据:
+mysql -u username -p ejabberd < backfile.bak
+-------------------------------------
+
+5. 主从配置完成之后, 重启Master和Slave上的mysqld服务
+<1> 在Master上运行下面命令:
+mysql>show master status;
+会看到类似下面信息:
++--------------------------------+----------+--------------+------------------+
+| File                           | Position | Binlog_Do_DB | Binlog_Ignore_DB |
++--------------------------------+----------+--------------+------------------+
+| mysql-bin-youbao-master.000001 |     8979 | ejabberd     | mysql            | 
++--------------------------------+----------+--------------+------------------+
+
+<2>在Slave服务器上运行下面命令
+mysql>slave start;        #启动复制线程.
+mysql>show slave status;  #查看Master和Slave是否配置正确
+会看到下面信息:
+Slave_IO_State  --> Waiting for master to send event
+Slave_IO_Running --> Yes
+Slave_SQL_Running --> Yes
+
+6. 测试配置结果:
+在Master服务器上手动插入数据, 查看Slave是否正确同步 :)
+
+=================================================
+MySQL FAQ:
+1. MySQL的配置文件在哪里?
+/etc/mysql/my.cnf
+
+2. MySQL的数据文件存放的位置在哪里?
+配置文件中的datadir选线的设置, 通常是
+datadir = /var/lib/mysql
+
+如果我们创建了一个新的database名为testdb, 这个数据文件会
+保存在/var/lib/mysql/testdb下面
+
+3. MySQL如何开启远程访问?
+MySQL安装完毕之后, 默认的配置是:
+bind-address = 127.0.0.1
+也就是本地配置, 在这种情况下不支持远程访问, 只有把bind-address修改成你的IP地址,
+才能'开启远程访问'.
+
+4. 如何启动, 停止, 重启MySQL?
+sudo /etc/init.d/mysql start
+sudo /etc/init.d/mysql stop
+sudo /etc/init.d/mysql restart
