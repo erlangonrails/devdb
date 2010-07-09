@@ -1,2 +1,0 @@
-PP_NAME=redis
-APP_VSN=0.3.5
