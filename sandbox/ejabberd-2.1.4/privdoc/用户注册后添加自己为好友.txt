@@ -1,0 +1,34 @@
+用户注册后, 系统自动添加自己为好朋友
+
+1. 用户注册的时候, 需要修改两个表:
+rostergroups
+rosterusers
+
+对应的SQL语句:
+a. insert into rostergroups(username, jid, grp) values 
+       ('liqiangtest5', 'liqiangtest5@91guoguo.com', '我的好友')
+b. insert into rosterusers(username, jid, nick, subscription, ask, 
+       askmessage, server, subscribe, type) 
+       values ('liqiangtest5', 'liqiangtest5@91guoguo.com', '', 
+       'N', 'N', '', 'N', '', 'item')
+
+2. 补充:
+rosterusers表中的subscription和ask两个字段的状态总结:
+定义了#roster{}和数据库rosterusers中数据的转换方式:
+
+已定义的的九种订阅状态(从用户的角度看)
+{roster#subscription, roster#ask}对应的数据库中的数据
+{N, N} "None" = 联系人和用户互相没有被对方订阅, 并且也都没有从对方那里请求一个订阅
+{N, O} "None + Pending Out" = 联系人和用户互相没有被对方订阅, 用户已经向联系人发送了一个订阅请求但还没有收到回复
+{N, I} "None + Pending In" = 联系人和用户互相没有被对方订阅, 联系人已经向用户发送了一个订阅请求但还没有收到回复
+(注意: 在这种状态下联系人的服务器不应该(SHOULD NOT)推送或递送名册条目, 但是应该(SHOULD)等待,直到联系人的订阅请求已经从用户那里得到批准)
+{N, B} "None + Pending Out/In" = 联系人和用户互相没有被对方订阅, 联系人已经向用户发送了一个订阅请求但还没有收到回复, 用户已经向联系人发送了一个订阅请求但还没有收到回复
+{T, N} "To" = 用户已订阅联系人(单向)
+{T, I} "To + Pending In" = 用户已订阅联系人, 联系人已经向用户发送了一个订阅请求但还没有收到回复
+{F, N} "From" = 联系人已订阅用户(单向)
+{F, O} "From + Pending Out" = 联系人已订阅用户(单向), 用户已经向联系人发送了一个订阅请求但还没有收到回复
+{B, N} "Both" = 用户和联系人互相被对方订阅了(双向)
+
+用户自己订阅自己:
+通常两个用户之间建立一个双向的订阅之后, 最终subscription和ask应该为'B', 'N'; 
+当如果'用户自己订阅自己的出席状态'完成之后, 最终subscription和ask应该为'N', 'N'.

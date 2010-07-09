@@ -1,32 +1,32 @@
 youbao私有的系统推荐好友查询接口
 
 1. 协议规定
-a. 新增的命名空间是: youbao:xmpp:recommend
+a. 新增的命名空间是: guoguo:xmpp:recommend
 b. 系统会'优先'推荐3个同城的异性好友给用户
-c. client发送的IQ stanza的'to'属性必须是'recommend.91youbao.com',
-   而不是'91youba.com'.
-d. client发送的IQ stanza必须包含'from'属性, 并且from属性是Username@91youba.com这种格式
+c. client发送的IQ stanza的'to'属性必须是'recommend.91guoguo.com',
+   而不是'91guoguo.com'.
+d. client发送的IQ stanza必须包含'from'属性, 并且from属性是Username@91guoguo.com这种格式
 
 <1> 用户请求系统推荐好友
-<iq type='get' to='recommend.91youbao.com' 
-    from='user1@91youbao.com ' id='exmpp-396429316'>
-  <query xmlns='youbao:xmpp:recommend'/>
+<iq type='get' to='recommend.91guoguo.com' 
+    from='user1@91guoguo.com ' id='exmpp-396429316'>
+  <query xmlns='guoguo:xmpp:recommend'/>
 </iq> 
 
 <2> S -> C 系统返回结果
 S -> C 系统返回结果
 a. 空结果 (没有符合条件的用户)
-<iq xmlns="jabber:client" from="recommend.91youbao.com"
-     to="user1@91youbao.com/exmpp#1275371668356985" type="result" id="exmpp-396429316">
-    <query xmlns="youbao:xmpp:recommend"/>
+<iq xmlns="jabber:client" from="recommend.91guoguo.com"
+     to="user1@91guoguo.com/exmpp#1275371668356985" type="result" id="exmpp-396429316">
+    <query xmlns="guoguo:xmpp:recommend"/>
 </iq>
 
 b. 返回合适的结果集
-<iq xmlns="jabber:client" from="recommend.91youbao.com"
-   to="user1@91youbao.com/exmpp#1275371668356985" type="result" id="exmpp-396429316">
-  <query xmlns="youbao:xmpp:recommend">
-    <item jid="user4@91youbao.com"/>
-    <item jid="user5@91youbao.com"/>
-    <item jid="user6@91youbao.com"/>
+<iq xmlns="jabber:client" from="recommend.91guoguo.com"
+   to="user1@91guoguo.com/exmpp#1275371668356985" type="result" id="exmpp-396429316">
+  <query xmlns="guoguo:xmpp:recommend">
+    <item jid="user4@91guoguo.com"/>
+    <item jid="user5@91guoguo.com"/>
+    <item jid="user6@91guoguo.com"/>
   </query>
 </iq>

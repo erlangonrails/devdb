@@ -1,5 +1,9 @@
 基于VCard的头像存储
 
+TODO:
+这个模块暂时切会基于MySQL存储头像, 有Bug, 切成基于Redis存储VCard信息之后, 用户的出席状态会出现异常,
+需要后续调查.
+
 a. <PHOTO/>元素包含<BINVAL>子元素, 该元素的值为图像的Base64编码的值.
 b. 存储位置从mysql切成redis
    我们把原本存储在mysql vcard表中的信息切成redis存储, 只是修改了odbc_queries中

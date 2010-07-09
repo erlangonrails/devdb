@@ -1,7 +1,9 @@
 youbao私有的用户在线时间查询接口
 
-1. 协议规定:
-a. 新增的命名空间是: youbao:xmpp:onlinetime
+
+=====================================================
+协议规定:
+a. 新增的命名空间是: guoguo:xmpp:onlinetime
 b. 返回的在线时间是分钟
 
 <1> C -> S (user2想查询user1的在线时间)
@@ -17,3 +19,72 @@ b. 返回的在线时间是分钟
     <onlinetime>12345</onlinetime>
   </query>
 </iq>
+
+
+性能影响:
+当用户登出的时候, 会多一次MySQL的读操作和一次写操作, 来更新用户数据库中记录的在线时间.
+
+
+=======================================================
+对VCard的扩展:
+概要:
+a. 当用户使用XEP-0054来请求"自己"或者"其它人"的VCard信息的时候, Ejabberd Server返回的
+   IQ-Stanza中增加下面一个字段表示用户在线的时间(单位: 分钟)
+   <YB_ONLINETIME>2643</YB_ONLINETIME>
+b. 这个变动不影响XEP-0054的"修改用户信息"的部分.
+
+性能影响:
+因为把用户的在线时间附加在VCard信息中传递给客户端, 所以每次客户端的VCard Get操作, 都会增加一次
+MySQL的读操作, 来读取数据库中的用户在线时间.
+
+
+例如:
+1. 检索用户的电子身份
+<1> C -> S 用去请求检索自己的VCard (不能包含to属性)
+<iq id='v1' type='get'>
+  <vCard xmlns='vcard-temp'/>
+</iq>
+
+<2> S -> C 服务器返回结果
+<iq id='v1' from="user1@youbao.com" to='user1@youbao.com/resource' type='result'>
+  <vCard xmlns='vcard-temp'>
+    <NICKNAME>user1_nickname</NICKNAME>
+    <YB_ONLINETIME>2643</YB_ONLINETIME>   %% 增加的字段, 用户user1@youbao.com的在线时间
+  </vCard>
+</iq>
+
+2. 更新用户的VCard
+<1> C -> S 更新VCard, 通过发送类型为set, 不带to地址的IQ-stanza.
+<iq id='v2' type='set'>
+  <vCard xmlns='vcard-temp'>
+    <NICKNAME>user1_newnickname</NICKNAME>
+  </vCard>
+</iq>
+
+<2> S -> C 服务器返回成功
+<iq id='v2' from="user1@youbao.com" to='user1@youbao.com/resource' type='result'/>
+
+3. 查看其它用户(user2@youbao.com)的VCard
+<1> C -> S 客户端发放查看另外用户VCard的请求 (包含to属性)
+<iq id='v3' to='user2@youbao.com' type='get'>
+  <vCard xmlns='vcard-temp'/>
+</iq>
+
+<2> S -> C 服务器返回结果
+<iq from="user2@lyoubao.com" to='user1@youbao.com/resource' type='result' id='v3'>
+  <vCard xmlns='vcard-temp'>
+    <NICKNAME>jer</NICKNAME>
+    <YB_ONLINETIME>3424</YB_ONLINETIME>   %% 增加的字段, 用户user2@youbao.com的在线时间
+  </vCard>
+</iq>
+
+4. 特殊情况: (要查询的用户无VCard信息, 这种情况下onlinetime也不会返回)
+查看其它用户(user4@youbao.com)的VCard (VCard表中无user4@youbao.com的数据)
+<1> C -> S 客户端发放查看另外用户VCard的请求 (包含to属性)
+<iq id='v4' to='user4@youbao.com' type='get'>
+  <vCard xmlns='vcard-temp'/>
+</iq>
+
+<2> S -> C 服务器返回结果
+<iq from="user4@youbao.com" to='user1@youbao.com/resource' type='result' id='v4'/>
+

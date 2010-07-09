@@ -2,7 +2,7 @@
 
 ===================================================================
 ID: 1
-State: Active
+State: Active - Closed
 CreateDate: 2010/7/1
 CloseDate: 2010/7/1
 Description: ejabberd redis driver驱动在大约5分钟内如果没有做任何数据操作, 
@@ -106,9 +106,58 @@ I(<0.38.0>:ejabberd_app:70) : ejabberd 2.1.4 is started in the node ejabberd@loc
 
 ===================================================================
 ID: 2
-State: Active
-CreateDate: 
-CloseDate:
-Description:
+State: Active - Closed
+CreateDate: 2010/7/5
+CloseDate: 2010/7/5
+Description: 当用户认证失败后, 会自动退出, 这个过程会调用ejabberd_c2s:terminate/3,
+             日志中出现下面错误
+Solution: Fixed
 ===================================================================
+详细描述:
+这个错误的原因是用户没有登录成功, 此时State#state.jid为undefined, 调用
+jlib:jid_remove_resource(LogoutJID)会抛出异常.
+
+解决方式:
+对State#state.jid进行判断, 如果为undefined, 则直接退出.
+
+ejabberd.log
+=INFO REPORT==== 2010-07-05 12:27:14 ===
+I(<0.343.0>:ejabberd_c2s:623) : ({socket_state,tls,{tlssock,#Port<0.3509>,#Port<0.3511>},<0.342.0>}) Failed authentication for liqiangtest8@91youbao.com
+
+=INFO REPORT==== 2010-07-05 12:27:14 ===
+D(<0.343.0>:ejabberd_c2s:1513) : Send XML on stream = "<failure xmlns='urn:ietf:params:xml:ns:xmpp-sasl'><not-authorized/></failure>"
+
+=ERROR REPORT==== 2010-07-05 12:27:14 ===
+** State machine <0.343.0> terminating 
+** Last event in was closed
+** When State == wait_for_feature_request
+**      Data  == {state,{socket_state,tls,
+                                      {tlssock,#Port<0.3509>,#Port<0.3511>},
+                                      <0.342.0>},
+                        ejabberd_socket,#Ref<0.0.0.9899>,false,"790637887",
+                        {sasl_state,"jabber","91youbao.com",[],
+                                    #Fun<ejabberd_c2s.1.44760145>,
+                                    #Fun<ejabberd_c2s.2.117047571>,
+                                    #Fun<ejabberd_c2s.3.49569146>,undefined,
+                                    undefined},
+                        c2s,c2s_shaper,false,true,false,true,
+                        [verify_none,
+                         {certfile,"/usr/local/imserver/server.pem"}],
+                        false,undefined,[],"91youbao.com",[],undefined,
+                        {0,nil},
+                        {0,nil},
+                        {0,nil},
+                        {0,nil},
+                        undefined,undefined,undefined,false,
+                        {userlist,none,[],false},
+                        unknown,unknown,
+                        {{116,228,188,74},21523},
+                        "*",
+                        {{2010,7,5},{12,27,14}},
+                        undefined}
+** Reason for termination = 
+** {function_clause,[{jlib,jid_remove_resource,[undefined]},
+                     {ejabberd_c2s,terminate,3},
+                     {p1_fsm,terminate,7},
+                     {proc_lib,init_p_do_apply,3}]}
 
