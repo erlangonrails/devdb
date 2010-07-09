@@ -2297,28 +2297,42 @@ pack_string(String, Pack) ->
 
 
 %% youbao private internal APIs:
+
+%% youbao用户登录:
+%% 1. 更新用户的IP & State
+%% 2. 添加用户的信息到在线用户索引中, 用于好友推荐.
 youbao_login_hook(State) ->
     JID = State#state.jid,
     youbao_online_ip:set_online_ip(JID#jid.lserver, JID#jid.luser, youbao_format_ip(State#state.ip), login),
     RecommendInfo = youbao_recommend:add_to_index(JID#jid.lserver, JID#jid.luser),
     ?INFO_MSG("#youbao#(~w) ~s:~s login success", 
 			       [State#state.socket, 
-			       jlib:jid_to_string(jlib:jid_remove_resource(JID)),  %% without resource
-			       jlib:jid_to_string(JID)]),                          %% with resource
+			        jlib:jid_to_string(jlib:jid_remove_resource(JID)),  %% without resource
+			        jlib:jid_to_string(JID)]),                          %% with resource
     RecommendInfo.
 
+%% youbao用户退出:
+%% 1. 更新用户的IP & State
+%% 2. 更新用户的在线时间记录
+%% 3. 记录用户的Session记录.
+%% 4. 把用户的信息从在线用户索引中删除
 youbao_logout_hook(State) ->
-    JID = State#state.jid,
-    IpStr = youbao_format_ip(State#state.ip),
-    youbao_onlinetime:set_onlinetime(JID#jid.lserver, JID#jid.luser, State#state.logintime),
-    youbao_online_ip:set_online_ip(JID#jid.lserver, JID#jid.luser, IpStr, logout),
-    youbao_session_log:set_session_log(JID#jid.lserver, JID#jid.luser, IpStr, State#state.logintime),
-    youbao_recommend:delete_from_index(JID#jid.lserver, JID#jid.luser, State#state.recommend_info),
-    ?INFO_MSG("#youbao#(~w) ~s:~s logout", 
-	                     [State#state.socket, 
-		             jlib:jid_to_string(jlib:jid_remove_resource(JID)),  %% without resource
-		             jlib:jid_to_string(JID)]),                          %% with the resource
-    ok.
+    case State#state.jid of
+	undefined ->
+	    ok;
+	JID ->
+            IpStr = youbao_format_ip(State#state.ip),
+            youbao_online_ip:set_online_ip(JID#jid.lserver, JID#jid.luser, IpStr, logout),
+            youbao_onlinetime:set_onlinetime(JID#jid.lserver, JID#jid.luser, State#state.logintime),
+            youbao_session_log:set_session_log(JID#jid.lserver, JID#jid.luser, IpStr, State#state.logintime),
+            youbao_recommend:delete_from_index(JID#jid.lserver, JID#jid.luser, State#state.recommend_info),
+            ?INFO_MSG("#youbao#(~w) ~s:~s logout", 
+	                             [State#state.socket, 
+		                      jlib:jid_to_string(jlib:jid_remove_resource(JID)),  %% without resource
+		                      jlib:jid_to_string(JID)]),                          %% with the resource
+    ok
+    end.
+    
 
 %% IPV4
 youbao_format_ip({{A, B, C, D}, Port}) ->

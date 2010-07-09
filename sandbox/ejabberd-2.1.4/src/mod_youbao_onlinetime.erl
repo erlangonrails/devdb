@@ -6,7 +6,7 @@
 -include("ejabberd.hrl").
 -include("jlib.hrl").
 
--define(NS_YOUBAO_ONLINETIME, "youbao:xmpp:onlinetime").
+-define(NS_YOUBAO_ONLINETIME, "guoguo:xmpp:onlinetime").
 -define(STANZA_ONLINETIME(Time),
 	{xmlelement, "query",
 	 [{"xmlns", ?NS_YOUBAO_ONLINETIME}],

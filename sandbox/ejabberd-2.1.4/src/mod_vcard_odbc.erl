@@ -154,8 +154,10 @@ process_sm_iq(From, To, #iq{type = Type, sub_el = SubEl} = IQ) ->
 			{error, _Reason} ->
 			    IQ#iq{type = error,
 				  sub_el = [SubEl, ?ERR_SERVICE_UNAVAILABLE]};
-			VCARD ->
-			    IQ#iq{type = result, sub_el = [VCARD]}
+                        VCARD ->
+	                    YB_onlinetime_el = youbao_onlinetime:get_onlinetime_el(LServer, Username),
+                            VCARDWithOnlinetime = xml:append_subtags(VCARD, YB_onlinetime_el),
+			    IQ#iq{type = result, sub_el = [VCARDWithOnlinetime]}
 		    end;
 		{selected, ["vcard"], []} ->
 		    IQ#iq{type = result, sub_el = []};
@@ -215,10 +217,8 @@ set_vcard(User, LServer, VCARD) ->
 	true ->
 	    Username = ejabberd_odbc:escape(User),
 	    LUsername = ejabberd_odbc:escape(LUser),
-            %% 由于Vcard切换到redis存储, 所以不需要再进行escape
-	    %%SVCARD = ejabberd_odbc:escape(
-	    %%	       lists:flatten(xml:element_to_string(VCARD))),
-            SVCARD = lists:flatten(xml:element_to_string(VCARD)),
+	    SVCARD = ejabberd_odbc:escape(
+	    	       lists:flatten(xml:element_to_string(VCARD))),
 	    SFN = ejabberd_odbc:escape(FN),
 	    SLFN = ejabberd_odbc:escape(LFN),
 	    SFamily = ejabberd_odbc:escape(Family),

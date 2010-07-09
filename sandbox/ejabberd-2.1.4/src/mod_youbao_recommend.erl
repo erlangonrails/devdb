@@ -106,7 +106,7 @@ handle_info({route, From, To, Packet}, State) ->
                                                      {"to", jlib:jid_to_string(From)},
                                                      {"from",jlib:jid_to_string(To)},
                                                      {"id",ID}],
-                                                    [{xmlelement,"query",[{"xmlns","youbao:xmpp:recommend"}],
+                                                    [{xmlelement,"query",[{"xmlns","guoguo:xmpp:recommend"}],
 						     users_to_xml(Users)}]},
 		      NewPacket
                end,

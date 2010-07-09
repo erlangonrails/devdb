@@ -1,7 +1,8 @@
 -module(youbao_onlinetime).
 -include("ejabberd.hrl").
--export([get_onlinetime/2, set_onlinetime/3]).
+-export([get_onlinetime/2, get_onlinetime_el/2, set_onlinetime/3]).
 
+-define(YB_ONLINETIME, "YB_ONLINETIME").
 
 %% #jid.lserver, #jid.luser
 get_onlinetime(Server, User) ->
@@ -15,6 +16,10 @@ get_onlinetime(Server, User) ->
 	    ?ERROR_MSG("#youbao# query return bad value:~p", [BadVal]),
 	    "0"
     end.
+
+get_onlinetime_el(Server, User) ->
+    YB_onlinetime = get_onlinetime(Server, User),
+    [{xmlelement, ?YB_ONLINETIME, [], [{xmlcdata, YB_onlinetime}]}].
 
 set_onlinetime(Server, User, LoginTime) ->
     OldSec = calendar:datetime_to_gregorian_seconds(LoginTime),

@@ -422,16 +422,16 @@ set_vcard(LServer, LUsername, SBDay, SCTRY, SEMail, SFN, SFamily, SGiven,
 	  SNickname, SOrgName, SOrgUnit, SVCARD, Username) ->
 
     %% redis存储vcard信息
-    RedisKey = "vcard:" ++ LUsername,
-    ejabberd_redis:set(RedisKey, SVCARD),
+    %% RedisKey = "vcard:" ++ LUsername,
+    %% ejabberd_redis:set(RedisKey, SVCARD),
 
     ejabberd_odbc:sql_transaction(
       LServer,
       fun() ->
                %%切成redis存储vcard, 注视掉这部分
-	       %% update_t("vcard", ["username", "vcard"],
-	       %%	       [LUsername, SVCARD],
-	       %%	       ["username='", LUsername, "'"]),
+	      update_t("vcard", ["username", "vcard"],
+	       	       [LUsername, SVCARD],
+	       	       ["username='", LUsername, "'"]),
 	      update_t("vcard_search",
 		       ["username", "lusername", "fn", "lfn", "family",
 			"lfamily", "given", "lgiven", "middle", "lmiddle",
@@ -448,21 +448,21 @@ set_vcard(LServer, LUsername, SBDay, SCTRY, SEMail, SFN, SFamily, SGiven,
 
 %% 从redis获取vcard的内容:
 %% (兼容MySQL Driver的返回值格式)
-get_vcard(_LServer, Username) ->
-    RedisKey = "svcard:" ++ Username,
-    case ejabberd_redis:get(RedisKey) of
-	null ->
-	    {selected, ["vcard"], []};
-	Data ->
-	    SVCARD = binary_to_list(Data),
-	    {selected, ["vcard"], [{SVCARD}]}
-    end.
+%% get_vcard(_LServer, Username) ->
+%%     RedisKey = "svcard:" ++ Username,
+%%     case ejabberd_redis:get(RedisKey) of
+%%	null ->
+%%	    {selected, ["vcard"], []};
+%%	Data ->
+%%	    SVCARD = binary_to_list(Data),
+%%	    {selected, ["vcard"], [{SVCARD}]}
+%%    end.
 
-%% get_vcard(LServer, Username) ->
-%%     ejabberd_odbc:sql_query(
-%%       LServer,
-%%       ["select vcard from vcard "
-%%        "where username='", Username, "';"]).
+get_vcard(LServer, Username) ->
+    ejabberd_odbc:sql_query(
+      LServer,
+      ["select vcard from vcard "
+       "where username='", Username, "';"]).
 
 get_default_privacy_list(LServer, Username) ->
     ejabberd_odbc:sql_query(
