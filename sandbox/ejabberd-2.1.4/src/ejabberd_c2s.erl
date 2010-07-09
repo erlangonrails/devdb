@@ -40,7 +40,8 @@
 	 send_element/2,
 	 socket_type/0,
 	 get_presence/1,
-	 get_subscribed/1]).
+	 get_subscribed/1,
+         get_logintime/1]).
 
 %% gen_fsm callbacks
 -export([init/1,
@@ -232,6 +233,9 @@ init([{SockMod, Socket}, Opts]) ->
 %% Return list of all available resources of contacts,
 get_subscribed(FsmRef) ->
     ?GEN_FSM:sync_send_all_state_event(FsmRef, get_subscribed, 1000).
+
+get_logintime(FsmRef) ->
+    ?GEN_FSM:sync_send_all_state_event(FsmRef, get_logintime, 1000).
 
 %%----------------------------------------------------------------------
 %% Func: StateName/2
@@ -1080,6 +1084,11 @@ handle_sync_event({get_presence}, _From, StateName, StateData) ->
 handle_sync_event(get_subscribed, _From, StateName, StateData) ->
     Subscribed = ?SETS:to_list(StateData#state.pres_f),
     {reply, Subscribed, StateName, StateData};
+
+%% 获取用户的登录时间
+handle_sync_event(get_logintime, _From, StateName, StateData) ->
+    Logintime = StateData#state.logintime,
+    {reply, Logintime, StateName, StateData};
 
 handle_sync_event(_Event, _From, StateName, StateData) ->
     Reply = ok,

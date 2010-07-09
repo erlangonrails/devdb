@@ -6,7 +6,7 @@
 set_session_log(Server, User, Ip, Logintime) ->
     Sid = gen_sid(Logintime),
     Logouttime = calendar:local_time(),
-    youbao_odbc_queries:set_session_log_t(Server, Sid, User, Ip, 
+    odbc_queries:set_session_log_t(Server, Sid, User, Ip, 
 					  fmt_time(Logintime), fmt_time(Logouttime)).
 
 

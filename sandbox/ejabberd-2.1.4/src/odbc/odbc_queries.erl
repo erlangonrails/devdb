@@ -80,7 +80,21 @@
 	 escape/1,
 	 count_records_where/3,
 	 get_roster_version/2,
-	 set_roster_version/2]).
+	 set_roster_version/2,
+         get_onlinetime/2,  %% youbao_onlinetime
+	 add_onlinetime/3,
+	 del_onlinetime/2,
+	 set_onlinetime_t/3,
+
+	 get_online_ip/2,   %% youbao_online_ip
+	 add_online_ip/4,
+	 del_online_ip/2,
+	 set_online_ip_t/4,
+
+         get_session_log/2, %% youbao_session_log
+	 add_session_log/6,
+	 del_session_log/2,
+	 set_session_log_t/6]).
 
 %% We have only two compile time options for db queries:
 %-define(generic, true).
@@ -560,6 +574,87 @@ del_privacy_lists(LServer, Server, Username) ->
     ejabberd_odbc:sql_query(
       LServer,
       ["delete from privacy_default_list where username='", Username, "';"]).
+
+
+get_online_ip(LServer, Username) ->
+    ejabberd_odbc:sql_query(
+      LServer,
+      ["select ip from youbao_online_ip "
+       "where username='", Username, "';"]).
+
+add_online_ip(LServer, Username, Ip, State) ->
+    ejabberd_odbc:sql_query(
+      LServer,
+      ["insert into youbao_online_ip(username, ip, state) "
+       "values ('", Username, "', '", Ip, "', '", State, "');"]).
+
+del_online_ip(LServer, Username) ->
+    ejabberd_odbc:sql_query(
+      LServer,
+      ["delete from youbao_online_ip where username='", Username ,"';"]).
+
+set_online_ip_t(LServer, Username, Ip, State) ->
+    ejabberd_odbc:sql_transaction(
+      LServer,
+      fun() ->
+	      update_t("youbao_online_ip", ["username", "ip", "state"],
+		       [Username, Ip, State],
+		       ["username='", Username ,"'"])
+      end).
+
+get_onlinetime(LServer, Username) ->
+    ejabberd_odbc:sql_query(
+      LServer,
+      ["select onlinetime from youbao_onlinetime "
+       "where username='", Username, "';"]).
+
+add_onlinetime(LServer, Username, Onlinetime) ->
+    ejabberd_odbc:sql_query(
+      LServer,
+      ["insert into youbao_onlinetime(username, onlinetime) "
+       "values ('", Username, "', '", Onlinetime, "');"]).
+
+del_onlinetime(LServer, Username) ->
+    ejabberd_odbc:sql_query(
+      LServer,
+      ["delete from youbao_onlinetime where username='", Username ,"';"]).
+
+set_onlinetime_t(LServer, Username, Onlinetime) ->
+    ejabberd_odbc:sql_transaction(
+      LServer,
+      fun() ->
+	      update_t("youbao_onlinetime", ["username", "onlinetime"],
+		       [Username, Onlinetime],
+		       ["username='", Username ,"'"])
+      end).
+
+
+get_session_log(LServer, Sid) ->
+    ejabberd_odbc:sql_query(
+      LServer,
+      ["select sid, username, ip, logintime, logouttime from youbao_session_log "
+       "where sid='", Sid, "';"]).
+
+add_session_log(LServer, Sid, Username, Ip, LoginTime, LogoutTime) ->
+    ejabberd_odbc:sql_query(
+      LServer,
+      ["insert into youbao_session_log(sid, username, ip, logintime, logouttime) "
+       "values ('", Sid, "', '", Username, "', '", Ip, "','", LoginTime ,"','", LogoutTime, "');"]).
+
+del_session_log(LServer, Sid) ->
+    ejabberd_odbc:sql_query(
+      LServer,
+      ["delete from youbao_session_log where sid='", Sid ,"';"]).
+
+set_session_log_t(LServer, Sid, Username, Ip, LoginTime, LogoutTime) ->
+    ejabberd_odbc:sql_transaction(
+      LServer,
+      fun() ->
+	      update_t("youbao_session_log", ["sid", "username", "ip", "logintime", "logouttime"],
+		       [Sid, Username, Ip, LoginTime, LogoutTime],
+		       ["sid='", Sid ,"'"])
+      end).
+
 
 %% Characters to escape
 escape($\0) -> "\\0";

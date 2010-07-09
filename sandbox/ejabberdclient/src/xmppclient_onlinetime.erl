@@ -47,7 +47,7 @@ loop(MySession, Count) ->
 get_onlinetime_in(MySession, FromJid, ToJid) ->
     Data = io_lib:format(
            "<iq type='get' to='~s' from='~s'>" ++
-	     "<query xmlns='youbao:xmpp:onlinetime'/>" ++
+	     "<query xmlns='guoguo:xmpp:onlinetime'/>" ++
 	   "</iq>", [ToJid, FromJid]),
     xmppclient_util:send_string(MySession, Data).
 

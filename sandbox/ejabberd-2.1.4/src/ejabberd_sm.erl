@@ -52,6 +52,7 @@
 	 connected_users_number/0,
 	 user_resources/2,
 	 get_session_pid/3,
+         get_session_pid/2,
 	 get_user_info/3,
 	 get_user_ip/3
 	]).
@@ -188,6 +189,16 @@ close_session_unset_presence(SID, User, Server, Resource, Status) ->
     close_session(SID, User, Server, Resource),
     ejabberd_hooks:run(unset_presence_hook, jlib:nameprep(Server),
 		       [User, Server, Resource, Status]).
+
+%% 自己添加的函数
+get_session_pid(User, Server) ->
+    LUser = jlib:nodeprep(User),
+    LServer = jlib:nameprep(Server),
+    US = {LUser, LServer},
+    case catch mnesia:dirty_index_read(session, US, #session.us) of
+	[#session{sid = {_, Pid}}|_] -> Pid;
+	_ -> none
+    end.
 
 get_session_pid(User, Server, Resource) ->
     LUser = jlib:nodeprep(User),
