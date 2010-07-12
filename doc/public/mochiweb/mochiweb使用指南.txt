@@ -1,0 +1,125 @@
+mochiweb常用的APIs的介绍
+
+注意点:
+<1> Req:get(path)和Req:get(raw_path)的区别
+    a. path是不包含query string和fragment并且经过urldecode之后的path, 
+       通常用于'HTTP消息的路由', 根据path不同的消息路由到相应的controller.
+    b. raw_path是没有经过urldecode的原始的path.
+
+===========================================
+1. 获取method
+Req:get(method) -> 'OPTIONS' | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'TRACE'.
+
+说明:
+返回值为atom,常用为'GET'和'POST'
+
+===========================================
+2. 获取raw path 
+Req:get(raw_path)  -> String().
+
+说明:
+返回值为string,其未进行urldecode
+
+举例:
+假设请求URL为: 
+http://domain.com/book%20food/my?user=id#sec1
+则raw_path为 "/book%20food/my?user=id#sec1"
+
+===========================================
+3. 获取Path
+Req:get(path)  -> String().
+
+说明:
+返回值为string,并且进行了urldecode,只包含URI中的path,不包含query string和fragment部分.
+
+举例:
+假设请求URL为:
+http://domain.com/book%20food/my?user=id#sec1
+则path为 "/book food/my"
+
+===========================================
+4. 获取query string
+Req:parse_qs() -> [{strng(), string()}].
+
+说明:
+返回值为query string的一个key-value列表, Key,Value均为string, 并且已经urldecode.
+
+举例:
+假设请求URL为:
+http://domain.com/book%20food/my?user=id#sec1
+则query string list为: [{"user", "id"}]
+
+===========================================
+5. 解析post数据
+Req:parse_post() -> [{strng(), string()}].
+
+说明:
+返回值为一个key-value列表, Key,Value均为string, 并且已经urldecode.
+确保post数据类型为: application/x-www-form-urlencoded, 否则不要调用
+(其内部会调用Req:recv_body).
+
+===========================================
+6. 获取client ip
+Req:get(peer) -> string().
+
+说明:
+返回值为client的ip
+
+===========================================
+7. 获取某个header
+Req:get_header_value(Key) -> undefined | string().
+
+说明:
+获取http headers中某个key对应的value.
+
+举例:
+Req:get_header_value("Keep-Alive") 返回结果为300
+
+===========================================
+8. 获取某个header的主value
+Req:get_primary_header_value(Key) -> undefined | string().
+
+说明:
+获取http headers中某个key对应的主值(value以分号分割).
+
+举例:
+假设Content-Type为application/x-www-form-urlencoded; charset=utf8,则
+Req:get_header_value("content-type")返回application/x-www-form-urlencoded
+
+===========================================
+9. 获取所有headers
+Req:get(headers) -> dict().
+
+说明:
+返回结果为stdlib/dict数据结构,可以通过mochiweb_headers模块进行操作.
+
+举例:
+下面代码显示请求中所有headers::
+ Headers = Req:get(headers),
+ lists:foreach(fun(Key, Value) ->
+                 io:format("~p : ~p ~n", [Key, Value])
+               end,
+    mochiweb_headers:to_list(Headers)).
+
+===========================================
+10. 解析cookie
+Req:parse_cookie() -> [{string(), string()}].
+
+说明:
+返回结果为key-value list
+
+===========================================
+11. 获取某项cookie
+Req:get_cookie_value(Key) -> string() | undefined
+
+说明:
+从cookie中获取某项数据
+
+
+
+
+
+
+
+
+
