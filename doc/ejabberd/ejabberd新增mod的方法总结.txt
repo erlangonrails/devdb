@@ -1,0 +1,153 @@
+ejabberd新增mod的方式总结
+
+======================================================
+说明:
+a. 文档针对IQ Stanza做总结
+b. 关于处理之后生成的ResIQ
+   route处理IQ Stanza返回的ResIQ需要自己调用ejabberd_route:route/3路由给用户,
+   local_iqtable和sm_iqtable不需要自己调用, 只要返回ResIQ即可(也可以返回ignore).
+c. 同一个mod, 比如mod_ping, 可以既是组件local_iqtable的iq handler, 也可以同时
+   是组件sm_iqtable的iq handler.
+d. 所有的iq handler, 如果Type是one_queue或者{queues, N}, 则都是一个gen_iq_handler
+   进程, 并且都挂在ejabberd_iq_sup进程下面, 这些gen_iq_handler进程的State决定了
+   处理IQ Stanza的方式(定义了回调的Module和Function)
+======================================================
+
+
+
+======================================================
+1. ejabberd的mod_xxx分为三个层面:
+<1> route层面的路由(ejabberd_route)
+<2> local_iqtable层面的路由(ejabberd_local)
+<3> sm_iqtable层面的路由(ejabberd_sm)
+
+ejabberd针对这三个模块在内部存储的数据结构:
+mnesia - route         -> {route, Domain, Pid, Local_hint}.
+ets    - local_iqtable -> {{XMLNS, Host}, Module, Function}.
+                          {{XMLNS, Host}, Module, Function, Opts}.
+ets    - sm_iqtable    -> {{XMLNS, Host}, Module, Function}.
+                          {{XMLNS, Host}, Module, Function, Opts}.
+
+
+======================================================
+2. Route的路由原理:
+<1> 例如: route表的数据内容如下
+[{route,"irc.91youbao.com",<0.276.0>,undefined},
+ {route,"vjud.91youbao.com",<0.309.0>,undefined},
+ {route,"conference.91youbao.com",<0.284.0>,undefined},
+ {route,"91youbao.com",<0.213.0>,{apply,ejabberd_local,route}},
+ {route,"recommend.91youbao.com",<0.261.0>,undefined}]
+
+<2> Route是根据IQ-Stanza的To地址的Server部分来路由的.
+a. 如果To地址的Server部分在route表中不存在对应的记录, 则交给ejabberd_s2s处理.
+b. 如果To地址的Server部分在route表中存在, 并且local_hint不等于undefined,
+   则交给local_hint处理, 也就是Module:Function(From, To, Packet)
+c. 如果To地址的Server部分在route表中存在, 并且local_hint等于undefined,
+   则发送直接发送消息给这个route进程, Pid ! {route, From, To, Packet}
+
+<3> 例如:
+a. <message from='user1@91youbao.com' to='user2@91youbao.com' 
+     type='chat' xml:lang='en'>
+     <body>test message</body>
+   </message> 
+这条消息会根据to属性的server地址91youbao.com, 查询route之后, 路由给
+ejabberd_local:route(From, To, Packet)处理.
+
+b. <iq from='user1@91youbao.com' to='recommend.91youbao.com' type='get'>
+     <query xmlns='youbao:xmpp:recommend'/>
+   </iq>
+这条消息会根据to属性的server地址recommend.91youbao.com, 查询route之后, 路由给
+<0.261.0>这个Pid处理, 也就是发送消息: Pid ! {route, From, To, Packet}给这个pid.
+(我们只需要在这个pid中接收并处理这个请求即可)
+
+<4> 处理完成后的结果Packet如何发送会给用户?
+重新交给Route路由即可, ejabberd所有的IQ-Stanza都是交给ejabberd_route:route/3路由的.
+我们处理完了一个IQ-Stanza, 产生一个新的结果Packet(通常type='result'), 想发送给用户, 
+只需要调用:
+ejabberd_route:route(From, To, Packet), 其中To地址是用户的Jid, 这样, 这个Packet会
+最终路由给用户的ejabberd_c2s模块, 通过socket发送个用户的.
+
+
+======================================================
+3. local_iqtable的路由原理:
+<1> 例如: local_iqtable的数据内容如下
+(删除了很多内容, 只是用部分内容来说明):
+[{{"jabber:iq:last","91youbao.com"},
+  mod_last_odbc,process_local_iq, {one_queue,<0.281.0>}},
+ {{"http://jabber.org/protocol/stats","91youbao.com"},
+  mod_stats,process_local_iq, {one_queue,<0.304.0>}},
+ {{"urn:xmpp:ping","91youbao.com"},
+  mod_ping,iq_ping, {one_queue,<0.293.0>}},
+ {{"urn:xmpp:time","91youbao.com"},
+  mod_time,process_local_iq, {one_queue,<0.306.0>}}]
+
+<2> local_iqtable是根据IQ-Stanza的xmlns属性来路由(To地址的User部分也参与规则).
+a. 如果To地址的User部分不为空, 也就是To地址是一个具体用户的Jid, 则交给sm_iqtable处理.
+b. 如果To地址的User部分为空, 也就是To地址不是一个具体的用户的Jid, 则自己处理.
+   i. 如果存储的是{{XMLNS, Host}, Module, Function}, 则调用
+      ResIQ = Module:Function(From, To, IQ)
+      ResIQ可以是一个IQ-Stanza或者是ignore, 如果IQ-Stanza会交给
+      ejabberd_route:route/3路由这个结果, 如果是ignore, 则结束处理过程.
+   ii. 如果存储的是{{XMLNS, Host}, Module, Function, Opts}, 则调用
+      gen_iq_handler:handle(Host, Module, Function, Opts,From, To, IQ)
+      这个函数本质上也会调用ResIQ = Module:Function(From, To, IQ), 其中ResIQ
+      路由的规则和i中的一致.
+
+<3> 例如:
+a. Client-To-Server ping
+   <iq from='juliet@capulet.lit/balcony' to='capulet.lit' id='c2s1' type='get'>
+     <ping xmlns='urn:xmpp:ping'/>
+   </iq>
+   这条消息的To地址的User部分为空, 查询local_iqtable之后, 最终会路由到
+   mod_ping:iq_ping(From, To, Packet)来处理.
+b. Clint-To-Client ping
+   <iq from='romeo@montague.lit/home' 
+       to='juliet@capulet.lit/chamber'
+       type='get' 
+       id='e2e1'>
+     <ping xmlns='urn:xmpp:ping'/>
+   </iq>
+   这条消息因为to地址的User部分不为空, 所以会交给ejabberd_sm:route(From, To, Packet)处理.
+注意:
+通过这个例子也可以看出, 同样一个mod, 比如mod_ping, 可以既是local_iqtable组件中的iq_handler, 
+也可以同时是sm_iqtable组件的iq_handler.
+
+<4> 注册iq_handler的原理:
+no_queue     - 在当前进程处理这一类的IQ Stanza
+one_queue    - 创建一个进程(gen_iq_handler进程)来处理这一类的IQ Stanza
+{queues, N}  - 创建N个进程(gen_iq_handler进程)来处理这一类的IQ Stanza
+parallel     - 每收到一个IQ Stanza都创建一个新的进程处理, 处理完之后进程结束
+
+a. 所有的IQ handler都隶属于某个组件, ejabberd有两个组件, local_iqtable和sm_iqtable.
+当用户调用gen_iq_handler:add_iq_handler(Component, Host, NS, Module, Function, Type)
+注册一个IQ handler的时候, 会根据Type的类型来决定如何创建这个handler.
+例如:one_queue, 则会在ejabberd_iq_sup这个进程下面挂一个子进程, 这个子进程是一个gen_iq_handler
+进程, 其中State是{host, Module, Function}. Module:Function/3就是处理IQ Stanza的方式.
+b. gen_iq_handler:handle(Host, Module, Function, Opts, From, To, IQ)会根据Otps来决定如何
+处理IQ Stanza, 如果是no_queue, 则会在本进程内直接调用Module:Function/3来处理; 如果是one_queue,
+则会发送Pid ! {process_iq, From, To, IQ}到对应的gen_iq_handler进程, 进程收到这个消息后, 进程处理.
+
+
+======================================================
+4. sm_iqtable的路由原理:
+<1> 例如: sm_iqtable的数据内容如下
+(删除了很多内容, 只是用部分内容来说明):
+[{{"jabber:iq:last","91youbao.com"},
+   mod_last_odbc,process_sm_iq, {one_queue,<0.282.0>}},
+ {{"guoguo:xmpp:onlinetime","91youbao.com"},
+   mod_youbao_onlinetime,process_iq,{one_queue,<0.262.0>}},
+ {{"jabber:iq:private","91youbao.com"},
+  mod_private_odbc,process_sm_iq,{one_queue,<0.295.0>}},
+ {{"urn:xmpp:ping","91youbao.com"},
+  mod_ping,iq_ping,{one_queue,<0.292.0>}}]
+
+<2> sm_iqtable是根据IQ-Stanza的xmlns属性来路由, 规则和local_iqtable中b.的方式一样.
+a. 自己处理IQ Stanza
+   i. 如果存储的是{{XMLNS, Host}, Module, Function}, 则调用
+      ResIQ = Module:Function(From, To, IQ)
+      ResIQ可以是一个IQ-Stanza或者是ignore, 如果IQ-Stanza会交给
+      ejabberd_route:route/3路由这个结果, 如果是ignore, 则结束处理过程.
+   ii. 如果存储的是{{XMLNS, Host}, Module, Function, Opts}, 则调用
+      gen_iq_handler:handle(Host, Module, Function, Opts,From, To, IQ)
+      这个函数本质上也会调用ResIQ = Module:Function(From, To, IQ), 其中ResIQ
+      路由的规则和i中的一致.
