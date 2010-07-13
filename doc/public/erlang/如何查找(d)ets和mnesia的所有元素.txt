@@ -1,0 +1,10 @@
+小技巧, 如何返回ets/dets/mnesia表格的全部内容
+(在调试程序的时候经常需要这样的操作)
+
+1. ets:match(Tab, '$1') -> 将返回ets表Tab中的所有元素.
+
+2. dets:match(Tab, '$1') -> 返回dets表Tab中的所有元素.
+
+3. ets:match(Tab, '$1') -> 返回mnesia表Tab中的所有元素
+   因为mnesia底层也是用ets/dets来实现的, 所以对于disc_copies和ram_copies
+   型的mnesia表, 也可以用ets:match/2来返回其中的所有元素:)
