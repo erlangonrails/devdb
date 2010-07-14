@@ -1,0 +1,9 @@
+%%%
+%%% kernel ver 2.8.0 == Erlang (BEAM) emulator version 5.2 == release R9B-0
+%%%
+
+{release, {"balance","1.0"}, {erts, "666.666.666"},
+ [{kernel,"2.9"},
+  {stdlib,"1.12"},
+  {sasl, "1.10"},
+  {balance, "1.0"}]}.
