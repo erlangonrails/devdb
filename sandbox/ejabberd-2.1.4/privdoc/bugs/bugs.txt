@@ -165,7 +165,7 @@ D(<0.343.0>:ejabberd_c2s:1513) : Send XML on stream = "<failure xmlns='urn:ietf:
 
 ===================================================================
 ID: 3
-State: Active - 
+State: Active - Closed
 CreateDate: 2010/7/14
 CloseDate: 2010/7/14
 Description: 我们修改了ejabberdctl中的HOST为本地IP地址之后, 启动ejabberd, ejabberd
@@ -215,4 +215,25 @@ ctlexec ()
   'Can\'t set long node name!\nPlease check your configuration\n',[]
 }
 ......
+
+
+===================================================================
+ID: 4
+State: Active - Closed
+CreateDate: 2010/7/14
+CloseDate: 2010/7/14
+Description: ejabberd连接远程的MySQL数据库超时
+Solution: Fixed
+===================================================================
+详细描述:
+配置远程的ejabberd节点, 连接到远程的MySQL数据库的时候, 出现连接超时的错误
+我们可以通过登录mysql, 运行show processlist;来显示当前的连接数, 会发现不断有连接login进来,
+然后断开.
+这是因为Erlang MySQL Driver的timeout时间默认为5秒太小了, 我们修改为60秒
+
+解决方式:
+修改mysql_conn.erl中的
+-define(DEFAULT_STANDALONE_TIMEOUT, 5000).   %% 老版本
+-define(DEFAULT_STANDALONE_TIMEOUT, 60000).  %% 新版本
+
 
