@@ -161,3 +161,58 @@ D(<0.343.0>:ejabberd_c2s:1513) : Send XML on stream = "<failure xmlns='urn:ietf:
                      {p1_fsm,terminate,7},
                      {proc_lib,init_p_do_apply,3}]}
 
+
+
+===================================================================
+ID: 3
+State: Active - 
+CreateDate: 2010/7/14
+CloseDate: 2010/7/14
+Description: 我们修改了ejabberdctl中的HOST为本地IP地址之后, 启动ejabberd, ejabberd
+             可以正常运行, 但是ejabberdctl的其它命令crash. 
+             例如:
+	     ejabberdctl status
+             ejabberdctl connected_users
+Solution: Fixed
+===================================================================
+详细描述:
+这个错误的由于erl的启动参数-name导致的, 错误代码在ejabberdctl中, CONN_NAME不能正确解析成longname
+
+错误的老版本:
+ctlexec ()
+{
+    CONN_NAME=$1; shift
+    COMMAND=$@
+    $EXEC_CMD "$ERL \
+      $NAME ${CONN_NAME} \
+      -noinput \
+      -hidden \
+      -pa $EJABBERD_EBIN_PATH \
+      -s ejabberd_ctl -extra $ERLANG_NODE $COMMAND"
+}
+
+解决方式:
+修改这个函数, 在CONN_NAME后面添加@HOST后缀,
+CONN_NAME=$1@HOST
+
+正确版本:
+ctlexec ()
+{
+    CONN_NAME=$1@HOST; shift
+    COMMAND=$@
+    $EXEC_CMD "$ERL \
+      $NAME ${CONN_NAME} \
+      -noinput \
+      -hidden \
+      -pa $EJABBERD_EBIN_PATH \
+      -s ejabberd_ctl -extra $ERLANG_NODE $COMMAND"
+}
+
+错误信息:
+{
+  error_logger,
+  {{2010,7,14},{9,53,34}},
+  'Can\'t set long node name!\nPlease check your configuration\n',[]
+}
+......
+

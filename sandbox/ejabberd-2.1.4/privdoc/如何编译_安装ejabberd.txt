@@ -1,0 +1,33 @@
+如何编译 & 安装当前版本的ejabberd?
+
+1. 编译 & 安装: ejabberd和附加的redis模块
+   cd ejabberd-2.1.4/src
+   ./configure --prefix=/usr/local/imserver --enable-odbc
+   make
+   cd ejabberd-2.1.4/src/redis
+   make 
+   sudo make install
+
+2. 安装MySQL Driver: mysql
+
+3. 安装Redis Driver: erl-redis
+
+4. 拷贝server.pem(SSL支持)
+   cp server.pem /usr/local/imserver/server.pem
+
+5. 拷贝ejabberd.cfg:
+   cp ejabberd-2.1.4/privdoc/config/ejabberd-v1.cfg \
+     usr/local/imserver/etc/ejabberd/ejabberd.cfg
+   a. 修改hosts名字 -> 91guoguo.com
+   b. 修改redis配置 -> redis
+   c. 修改SSL证书文件 -> ejabberd_c2s -> certfile
+   d. 修改MySQL数据库配置 -> odbc_server
+
+6. 修改ejabberdctl(支持longname)
+   a. 将HOST修改为本地的IP
+      HOST=xxx.xxx.xxx.xxx
+   b. 修改函数ctlexec()
+      将CONN_NAME=$1修改为
+      CONN_NAME=$1@HOST
+
+7. 启动ejabberd, 检查log是否有错误. 
