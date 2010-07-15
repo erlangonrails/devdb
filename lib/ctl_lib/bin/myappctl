@@ -14,12 +14,13 @@ HOST=localhost
 
 NAME=myapp
 NODE=$NAME@$HOST
+NAME=-sname
 ROOT="`dirname "$0"`"
 ROOT="`cd "$ROOT"/.. && pwd`"
 
 case "$1" in
   start)
-	 $ERL -noinput -detached -sname $NODE \
+	 $ERL -noinput -detached $NAME $NODE \
            -pa "$ROOT/ebin" -s myapp start
 	 sleep 2
 	 $0 status
@@ -27,11 +28,11 @@ case "$1" in
   debug)
          echo "Press any key to continue" 
          read foo 
-         $ERL -sname myappdebug@$HOST -remsh $NODE \
+         $ERL $NAME myappdebug@$HOST -remsh $NODE \
            -pa "$ROOT/ebin"
          ;;
       *)
-         $ERL -noinput -sname myappctl@$HOST \
+         $ERL -noinput $NAME myappctl@$HOST \
            -pa "$ROOT/ebin" -s myapp_ctl -extra $NODE $@
          ;;
 esac
