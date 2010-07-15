@@ -1,4 +1,4 @@
--module(corntab_ctl).
+-module(crontab_ctl).
 % remote control of the server
 
 -export([start/0, process/1]).
