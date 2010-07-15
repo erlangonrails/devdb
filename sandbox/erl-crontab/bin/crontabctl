@@ -1,0 +1,38 @@
+#!/bin/sh
+
+###########################
+# Configuration
+###########################
+
+ERL=erl
+HOST=localhost
+
+###########################
+# End of configuration
+###########################
+
+
+NAME=crontab
+NODE=$NAME@$HOST
+NAME=-sname
+ROOT="`dirname "$0"`"
+ROOT="`cd "$ROOT"/.. && pwd`"
+
+case "$1" in
+  start)
+	 $ERL -noinput -detached $NAME $NODE \
+           -pa "$ROOT/ebin" -s crontab start
+	 sleep 2
+	 $0 status
+	 ;;
+  debug)
+         echo "Press any key to continue" 
+         read foo 
+         $ERL $NAME crontabdebug@$HOST -remsh $NODE \
+           -pa "$ROOT/ebin"
+         ;;
+      *)
+         $ERL -noinput $NAME crontabctl@$HOST \
+           -pa "$ROOT/ebin" -s crontab_ctl -extra $NODE $@
+         ;;
+esac
