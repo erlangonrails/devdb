@@ -1,12 +1,31 @@
 -module(myapp_ctl).
 % remote control of the server
 
+-export([get_config_file/0, get_log_file/0]).
 -export([start/0, process/1]).
 
+-define(DEFAULT_CONFIG_FILE, "myapp.cfg").
+-define(DEFAULT_LOG_FILE, "myapp.log").
 -define(STATUS_SUCCESS, 0).
 -define(STATUS_ERROR,   1).
 -define(STATUS_USAGE,   2).
 -define(STATUS_BADRPC,  3).
+
+get_config_file() ->
+    case os:getenv("MYAPP_CONFIG_PATH") of
+	false ->
+	    ?DEFAULT_CONFIG_FILE;
+	Path ->
+	    Path
+    end.
+
+get_log_file() ->
+    case os:getenv("MYAPP_LOG_PATH") of
+	false ->
+	    ?DEFAULT_LOG_FILE;
+	Path ->
+	    Path
+    end.
 
 start() ->
     case init:get_plain_arguments() of
