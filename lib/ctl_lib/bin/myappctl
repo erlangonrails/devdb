@@ -44,9 +44,9 @@ export ERL_MAX_ETS_TABLES
 case "$1" in
   start)
 	 $ERL -noinput -detached $NAME $NODE \
-           -sasl sasl_error_logger \{file,\"$SASL_LOG_PATH\"\} \
            $ERLANG_OPTS \
-           -pa "$ROOT/ebin" -s myapp start 
+           -pa "$ROOT/ebin" -s myapp start \
+           -sasl sasl_error_logger \{file,\"$SASL_LOG_PATH\"\} 
 	 sleep 5
 	 $0 status
 	 ;;

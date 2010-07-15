@@ -6,6 +6,7 @@
 -export([start/0, loop/0]).
 
 start() ->
+    application:start(sasl), 
     application:start(myapp).
 
 start(normal, _StartArgs) ->
