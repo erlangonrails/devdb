@@ -1,6 +1,7 @@
 -module(crontab_server).
 -behaviour(gen_server).
 -include("crontab.hrl").
+-include("erl_logger.hrl").
 
 -export([start_link/0]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -15,7 +16,7 @@
         cron_timer :: reference()       % the check cron task timer
     }).
 
--define(CRON_FILE, "crontab.cfg").
+
 -define(CHECK_FILE_INTERVAL, 60000). % 1 min
 -define(CHECK_CRON_INTERVAL, 60000). % 1 min
 -define(SERVER, ?MODULE).
@@ -30,19 +31,20 @@ start_link() ->
 %% gen_server callbacks
 init(_Args) ->
     process_flag(trap_exit, true),
-    case crontab_parse:parse(?CRON_FILE) of
+    ConfigFile = crontab_ctl:get_config_file(),
+    case crontab_parse:parse(ConfigFile) of
         {ok, Entrys} ->
             ?Debug("parse the crontab success~n", []),
             State = #state{
-                file = ?CRON_FILE,
-                mtime = filelib:last_modified(?CRON_FILE),
+                file = ConfigFile,
+                mtime = filelib:last_modified(ConfigFile),
                 entrys = Entrys,
                 file_timer = check_file_timer(),
                 cron_timer = check_cron_timer()
             },
             {ok, State};
         Error ->
-            ?Error("error :~p", [Error]),
+            ?ERROR_MSG("error :~p", [Error]),
             Error
     end.
 
@@ -68,7 +70,7 @@ handle_info({timeout, _Ref, check_file}, State = #state{file = File, mtime = MTi
                     },
                     {noreply, State3};
                 _Error ->
-                    ?Warn("the crontab file ~s format error:~p", [File, _Error]),
+                    ?ERROR_MSG("the crontab file ~s format error:~p", [File, _Error]),
                     {noreply, State2}
             end;
         false ->
@@ -112,6 +114,7 @@ check_entrys(Entrys) ->
         fun(Entry) ->
                 case can_run(Entry, Now, Week) of
                     true ->
+                        ?DEBUG("run task:~p", [Entry]),
                         run_task(Entry#cron_entry.mfa);
                     false ->
                         ok
@@ -162,7 +165,7 @@ run_task({M, F, A} = Task) ->
         fun() ->
             case catch apply(M, F, A) of
                 {'EXIT', R} ->
-                    ?Error("cron task ~p error: ~p", [Task, R]),
+                    ?ERROR_MSG("cron task ~p error: ~p", [Task, R]),
                     ok;
                 _ ->
                     ok

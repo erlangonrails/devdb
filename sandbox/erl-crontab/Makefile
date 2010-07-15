@@ -5,4 +5,5 @@ all:
 
 clean:
 	rm -f *~
+	rm -f ./log/*
 	cd src && $(MAKE) clean

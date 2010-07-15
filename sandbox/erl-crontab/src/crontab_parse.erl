@@ -1,5 +1,6 @@
 -module(crontab_parse).
 -include("crontab.hrl").
+-include("erl_logger.hrl").
 
 -export([parse/1]).
 
@@ -9,10 +10,10 @@
 parse(File) ->
     case file:consult(File) of
         {error, enoent} = Error ->
-            ?Warn("crontab file ~p not exist", [File]),
+            ?ERROR_MSG("crontab file ~p not exist", [File]),
             Error;
         {error, R} = Error ->
-            ?Warn("crontab file error: ~p", [file:format_error(R)]),
+            ?ERROR_MSG("crontab file error: ~p", [file:format_error(R)]),
             Error;
         {ok, CronTab} ->
             parse_entrys(CronTab)
@@ -33,7 +34,7 @@ parse_entrys(CronTab) ->
                     {ok, CronEntry} ->
                         [CronEntry | Acc];
                     {error, R} ->
-                        ?Warn("the line :~p error:~p", [Entry, R]),
+                        ?ERROR_MSG("the line :~p error:~p", [Entry, R]),
                         Acc
                 end
         end,
