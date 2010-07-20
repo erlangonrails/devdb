@@ -1,0 +1,24 @@
+#!/usr/bin/env escript
+
+-define(DEF_PORT, 5001).
+-define(DEF_IP, "127.0.0.1").
+
+main([IP, Port]) ->
+    send_req(IP, list_to_integer(Port));
+main([]) ->
+    send_req(?DEF_IP, ?DEF_PORT);
+main(_) ->
+    usage().
+
+
+%% Internal APIs
+usage() ->
+    io:format("client_reader ServerIP ServerPort~n", []).
+
+send_req(IP, Port) ->
+    {ok, Socket} = gen_tcp:connect(IP, Port, [binary, {packet, 0}]),
+    receive
+	{tcp, Socket, Bin} ->
+	    io:format("~p~n", [Bin]),
+	    gen_tcp:close(Socket)
+    end.
