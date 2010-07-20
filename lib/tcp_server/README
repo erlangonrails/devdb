@@ -1,0 +1,11 @@
+是一个TCP Server的模板, 可以直接利用这个模块实现一个高并发的TCP Server
+
+1. 只需要自己实现一个ClientReader模块即可, 在这个模块中处理Socket数据.
+   这个模块需要实现两个接口:
+   ClientModule:start_link()
+   ClientModule:set_socket(Child, Sock)
+   具体参考client_reader的实现
+
+2. 注意:
+   把tcp server嵌入到其它application的时候, 需要注意的是tcp_server模块中tcpserver_ctl的调用,
+   这个可能需要修改成目标模块的ctl的调用形式, 如myechoapp_ctl.
