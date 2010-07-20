@@ -80,7 +80,8 @@ print_usage() ->
       "  restart~n"
       "  status~n"
       "  debug~n"
+      "  benchmark ReqCount ReqInterval(ms)~n"
       "~n"
       "Example:~n"
-      "  tcpserverctl restart~n"
+      "  tcpserverctld restart~n"
      ).
