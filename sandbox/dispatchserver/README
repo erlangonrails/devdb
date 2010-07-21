@@ -1,0 +1,24 @@
+1. 如何安装dispatchserver?
+手动拷贝下面目录到dispatchserver安装路径下即可
+bin
+ebin
+etc
+log
+
+2. 如何启动, 停止dispatchserver? 如何查看dispatchserver的运行状态?
+dispatchserverctl start
+dispatchserverctl stop
+dispatchserverctl status
+
+
+3. benchmark:
+dispatchserverctl提供了一个benchmark的测试命令
+dispatchserverctl benchmark ReqCount ReqInterval(ms)
+
+例子: 
+一共发送10000次请求, 每个请求间隔5毫秒(也就是美妙200次请求)
+dispatchserverctl benchmark 10000 5
+    Analyze:
+    Request N:  10000  Success: 10000 Error: 0
+    Timer (ms) Min: 0.23 Max:240.804 Avg:1.1811898 
+

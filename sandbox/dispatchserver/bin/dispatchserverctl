@@ -50,6 +50,11 @@ case "$1" in
 	 sleep 5
 	 $0 status
 	 ;;
+  benchmark)
+	 $ERL -noinput $NAME dispatchserverbenchmark@$HOST \
+           $ERLANG_OPTS \
+           -pa "$ROOT/ebin" -s dispatchserver_benchmark -extra $@
+	 ;;
   debug)
          echo "Press any key to continue" 
          read foo 
