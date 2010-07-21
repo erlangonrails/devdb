@@ -9,3 +9,15 @@
 2. 注意:
    把tcp server嵌入到其它application的时候, 需要注意的是tcp_server模块中tcpserver_ctl的调用,
    这个可能需要修改成目标模块的ctl的调用形式, 如myechoapp_ctl.
+
+
+3. benchmark: 
+tcpserverctl提供了一个benchmark的接口, 使用方式是:
+tcpserverctl benchmark ReqCount ReqInterval(ms)
+
+例子: 
+一共发送10000次请求, 每个请求间隔5毫秒(也就是美妙200次请求)
+tcpserverctl benchmark 10000 5
+    Analyze:
+    Request N:  10000  Success: 10000 Error: 0
+    Timer (ms) Min: 0.284 Max:243.167 Avg:0.9305647 

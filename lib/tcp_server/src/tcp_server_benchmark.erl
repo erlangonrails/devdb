@@ -102,10 +102,10 @@ send_req(IP, Port) ->
         Start = erlang:now(),
         {ok, Socket} = gen_tcp:connect(IP, Port, [binary, {packet, 0}]),
         receive
-	    {tcp, Socket, Bin} ->
+	    {tcp, Socket, <<"client_reader msg">>} -> %% 等于client_reader模块的返回值
 	        gen_tcp:close(Socket),
                 End = erlang:now(),
-	        Parent ! {self(), {ok, Bin}, timer:now_diff(End, Start)}
+	        Parent ! {self(), {ok, success}, timer:now_diff(End, Start)}
         after ?DEF_TIMEOUT ->
             End = erlang:now(),
             gen_tcp:close(Socket),
