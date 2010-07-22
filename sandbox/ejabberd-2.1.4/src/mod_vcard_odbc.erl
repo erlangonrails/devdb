@@ -217,8 +217,11 @@ set_vcard(User, LServer, VCARD) ->
 	true ->
 	    Username = ejabberd_odbc:escape(User),
 	    LUsername = ejabberd_odbc:escape(LUser),
-	    SVCARD = ejabberd_odbc:escape(
-	    	       lists:flatten(xml:element_to_string(VCARD))),
+            %% 添加youbao自己的私有逻辑:
+            %% 针对头像为空的情况:
+	    %% SVCARD = ejabberd_odbc:escape(
+	    %%	       lists:flatten(xml:element_to_string(VCARD))),
+            SVCARD = youbao_gen_svcard(User, LServer, VCARD),
 	    SFN = ejabberd_odbc:escape(FN),
 	    SLFN = ejabberd_odbc:escape(LFN),
 	    SFamily = ejabberd_odbc:escape(Family),
@@ -651,3 +654,62 @@ remove_user(User, Server) ->
       LServer,
       [["delete from vcard where username='", Username, "';"],
        ["delete from vcard_search where lusername='", Username, "';"]]).
+
+
+%% 原有的头像处理逻辑:
+%% SVCARD = ejabberd_odbc:escape(
+%%	       lists:flatten(xml:element_to_string(VCARD)))
+%%
+%% <1> xml:get_subtag(VCARDOLD, "PHOTO") 可能的返回值
+%% a. false
+%% b. {xmlelement,"PHOTO",[],[]}
+%% c. {xmlelement,"PHOTO",[],
+%%        [{xmlelement,"TYPE",[],[]},
+%%         {xmlelement,"BINVAL",[],[]}]}
+%% c. {xmlelement,"PHOTO",[],
+%%        [{xmlelement,"TYPE",[],
+%%            [{xmlcdata,<<"image/jpeg">>}]},
+%%         {xmlelement,"BINVAL",[],
+%%             [{xmlcdata,<<"Base64-encoded-avatar-file-of-user1@91guoguo.com">>}]}]}
+youbao_gen_svcard(User, LServer, VCARD) ->
+    Username = ejabberd_odbc:escape(User),
+    case catch odbc_queries:get_vcard(LServer, Username) of
+        {selected, ["vcard"], [{SVCARD}]} ->
+	    case xml_stream:parse_element(SVCARD) of
+	        {error, _Reason} ->
+	            ejabberd_odbc:escape(lists:flatten(xml:element_to_string(VCARD)));
+                VCARDOLD ->
+                    case xml:get_subtag(VCARDOLD, "PHOTO") of
+	                false ->
+	                    ejabberd_odbc:escape(lists:flatten(xml:element_to_string(VCARD)));
+			{xmlelement,"PHOTO",[],[]} ->
+                            ejabberd_odbc:escape(lists:flatten(xml:element_to_string(VCARD)));	
+                        {xmlelement,"PHOTO",[], [{xmlelement,"TYPE",[],[]}, {xmlelement,"BINVAL",[],[]}]} ->
+                            ejabberd_odbc:escape(lists:flatten(xml:element_to_string(VCARD)));
+                        PhotoEl ->
+	                    case xml:get_subtag(VCARD, "PHOTO") of
+                                false ->
+	                            %% 使用老头像替换
+                                    VCARD1 = xml:delete_subtag(VCARD, "PHOTO"),
+                                    VCARD2 = xml:append_subtags(VCARD1, [PhotoEl]),
+	                            ejabberd_odbc:escape(lists:flatten(xml:element_to_string(VCARD2)));
+	                        {xmlelement,"PHOTO",[],[]} ->
+                                    %% 使用老头像替换
+	                            VCARD1 = xml:delete_subtag(VCARD, "PHOTO"),
+                                    VCARD2 = xml:append_subtags(VCARD1, [PhotoEl]),
+	                            ejabberd_odbc:escape(lists:flatten(xml:element_to_string(VCARD2)));
+                                {xmlelement,"PHOTO",[], [{xmlelement,"TYPE",[],[]}, {xmlelement,"BINVAL",[],[]}]} ->
+                                    %% 使用老头像替换
+	                            VCARD1 = xml:delete_subtag(VCARD, "PHOTO"),
+                                    VCARD2 = xml:append_subtags(VCARD1, [PhotoEl]),
+	                            ejabberd_odbc:escape(lists:flatten(xml:element_to_string(VCARD2)));
+	                        _ ->
+	                            ejabberd_odbc:escape(lists:flatten(xml:element_to_string(VCARD)))
+                            end
+                    end
+	    end;
+	{selected, ["vcard"], []} ->
+	    ejabberd_odbc:escape(lists:flatten(xml:element_to_string(VCARD)));
+	_ ->
+	    ejabberd_odbc:escape(lists:flatten(xml:element_to_string(VCARD)))
+    end.

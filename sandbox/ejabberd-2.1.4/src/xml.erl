@@ -35,6 +35,7 @@
 	 get_tag_attr/2, get_tag_attr_s/2,
 	 get_subtag/2, get_subtag_cdata/2,
 	 append_subtags/2,
+         delete_subtag/2,
 	 get_path_s/2,
 	 replace_tag_attr/3]).
 
@@ -222,6 +223,13 @@ get_subtag_cdata(Tag, Name) ->
 
 append_subtags({xmlelement, Name, Attrs, SubTags1}, SubTags2) ->
     {xmlelement, Name, Attrs, SubTags1 ++ SubTags2}.
+
+%% 添加的youbao私有函数, 需要测试:)
+delete_subtag({xmlelement, Name, Attrs, []}, DelName) ->
+    {xmlelement, Name, Attrs, []};
+delete_subtag({xmlelement, Name, Attrs, SubTags}, DelName) ->
+    {xmlelement, Name, Attrs, lists:keydelete(DelName, 2, SubTags)}.
+
 
 get_path_s(El, []) ->
     El;
