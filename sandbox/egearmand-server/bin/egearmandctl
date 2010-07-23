@@ -1,0 +1,63 @@
+#!/bin/sh
+
+###########################
+# Configuration
+###########################
+
+ERL=erl
+HOST=localhost
+
+POLL=true
+SMP=auto
+ERL_PROCESSES=2500000
+ERL_MAX_PORTS=320000
+ERL_MAX_ETS_TABLES=14000
+
+###########################
+# End of configuration
+###########################
+
+
+MYAPP=egearmand
+NODE=$MYAPP@$HOST
+NAME=-sname
+ROOT="`dirname "$0"`"
+ROOT="`cd "$ROOT"/.. && pwd`"
+
+ERLANG_OPTS="+K $POLL -smp $SMP +P $ERL_PROCESSES" 
+
+# define additional environment variables 
+MYAPP_CONFIG_PATH=$ROOT/etc/egearmand.cfg 
+MYAPP_LOG_PATH=$ROOT/log/egearmand.log 
+SASL_LOG_PATH=$ROOT/log/sasl.log 
+DATETIME=`date "+%Y%m%d-%H%M%S"`
+ERL_CRASH_DUMP=$ROOT/log/erl_crash_$DATETIME.dump 
+
+# export global variables 
+export MYAPP_CONFIG_PATH 
+export MYAPP_LOG_PATH 
+export SASL_LOG_PATH
+export ERL_CRASH_DUMP 
+export ERL_MAX_PORTS
+export ERL_MAX_ETS_TABLES
+
+case "$1" in
+  start)
+	 $ERL -noinput -detached $NAME $NODE \
+           $ERLANG_OPTS \
+           -pa "$ROOT/ebin" -s egearmand start \
+           -sasl sasl_error_logger \{file,\"$SASL_LOG_PATH\"\} 
+	 sleep 5
+	 $0 status
+	 ;;
+  debug)
+         echo "Press any key to continue" 
+         read foo 
+         $ERL $NAME egearmanddebug@$HOST -remsh $NODE \
+           -pa "$ROOT/ebin"
+         ;;
+      *)
+         $ERL -noinput $NAME egearmandctl@$HOST \
+           -pa "$ROOT/ebin" -s egearmand_ctl -extra $NODE $@
+         ;;
+esac
