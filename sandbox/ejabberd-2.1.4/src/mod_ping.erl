@@ -40,8 +40,11 @@
 
 -define(DICT, dict).
 
+-record(onlinetime, {user, time}).
+
 %% API
 -export([start_link/2, start_ping/2, stop_ping/2]).
+-export([get_onlinetime/1, reset_onlinetime/1]).
 
 %% gen_mod callbacks
 -export([start/2, stop/1]).
@@ -92,6 +95,10 @@ stop(Host) ->
 %% gen_server callbacks
 %%====================================================================
 init([Host, Opts]) ->
+    %% 创建一个onlinetime表, 存放多倍积分的统计时间.
+    mnesia:create_table(onlinetime,
+			[{ram_copies, [node()]},
+			 {attributes, record_info(fields, onlinetime)}]),
     SendPings = gen_mod:get_opt(send_pings, Opts, ?DEFAULT_SEND_PINGS),
     PingInterval = gen_mod:get_opt(ping_interval, Opts, ?DEFAULT_PING_INTERVAL),
     TimeoutAction = gen_mod:get_opt(timeout_action, Opts, none),
@@ -179,8 +186,16 @@ code_change(_OldVsn, State, _Extra) ->
 %%====================================================================
 %% Hook callbacks
 %%====================================================================
-iq_ping(_From, _To, #iq{type = Type, sub_el = SubEl} = IQ) ->
+iq_ping(From, _To, #iq{type = Type, sub_el = SubEl} = IQ) ->
     case {Type, SubEl} of
+        {get, {xmlelement, "ping", [{"xmlns","urn:xmpp:ping"}], [{xmlelement,"onlinetime",
+                                                                 [], [{xmlcdata, N}]}]}} ->
+            %% 更新用户的在线时间
+            ResN = onlinetime_to_integer(N),
+            User = From#jid.user,
+            ResTime = get_onlinetime(User) + (ResN - 1)*30,
+            mnesia:dirty_write(#onlinetime{user=User, time=ResTime}),
+            IQ#iq{type = result, sub_el = []};
         {get, {xmlelement, "ping", _, _}} ->
             IQ#iq{type = result, sub_el = []};
         _ ->
@@ -232,4 +247,26 @@ cancel_timer(TRef) ->
             end;
         _ ->
             ok
+    end.
+
+%% TODO:
+%% 修复成安全转换, 否则当N不能转换时会Crash!!!
+onlinetime_to_integer(N) when is_list(N) ->
+    list_to_integer(N);
+onlinetime_to_integer(N) when is_binary(N) ->
+    N1 = binary_to_list(N),
+    list_to_integer(N1).
+
+reset_onlinetime(User) ->
+    mnesia:dirty_delete(onlinetime, User).
+
+%% youbao私有的逻辑
+get_onlinetime(User) ->
+    case mnesia:dirty_read(onlinetime, User) of
+        [] ->
+            0;
+        [#onlinetime{user=User, time=Time}] ->
+            Time;
+        _ ->
+            0
     end.
