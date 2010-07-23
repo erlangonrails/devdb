@@ -50,6 +50,11 @@ case "$1" in
 	 sleep 5
 	 $0 status
 	 ;;
+  test)
+	 $ERL -noinput $NAME egearmandtest@$HOST \
+           $ERLANG_OPTS \
+           -pa "$ROOT/ebin" -s egearmand_test test -s erlang halt
+	 ;;
   debug)
          echo "Press any key to continue" 
          read foo 

@@ -80,6 +80,7 @@ print_usage() ->
       "  restart~n"
       "  status~n"
       "  debug~n"
+      "  test~n"
       "~n"
       "Example:~n"
       "  egearmandctl restart~n"
