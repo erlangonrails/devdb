@@ -1,0 +1,134 @@
+=== introduction
+
+An experimental Gearmand distributed server written in Erlang with all the things Gearman should not have: replicated persistent queues,
+incipient error recovery and support for clustering.
+
+=== State of the implementation
+
+You can take a look at the CHANGELOG file to see the state of the implementation of the Gearman protocol.
+At this moment, the binary and administrative protocol are fully implemented.
+The server has been tested with the java and ruby Gearman client libraries using a single node configuration.
+
+=== dependencies
+
+Erlang (tested with OTP R13B01),
+Ruby and Rake for compiling
+
+=== OTP application support
+
+The application always start as an OTP application using the egearmand script , you can
+start the shell with:
+> application:start(egearmand) .
+You can change the configuration of the application editing the
+file ebin/egearmand.app, editing the host, port, and log mechanism.
+
+=== extensions
+
+From version 0.3 the server has initial support for extensions.
+An extension connecting the Gearman server implementation to the
+RabbitMQ queue system is included. To use the extension, be sure
+you have erlang-rfc4627 in the path and before calling to
+gearmand:start(), invoke rabbitmq_extension:start() from the
+erlang shell.
+
+The dependencies for building the extension are:
+
+-rabbitmq server
+-rabbitmq-erlang-client
+-erlang-rfc4627 (included in the contrib directory)
+
+You can find instructions about setting up rabbitmq-server and the erlang client
+on OS X here: http://antoniogarrote.lacoctelera.net/post/2009/08/27/installing-rabbitmq-erlang-client-in-os-x
+
+There are examples in the /examples directory  of three ruby
+scripts creating, publishing and consuming messages from a queue
+through the egearmand server.
+
+=== tests
+
+Few and scattered through the source files.
+To run all the tests, starts the erlang shell with the loaded code of the server and run:
+> tests:test() .
+
+=== configuration
+
+The default configuration: host, port, log level and log file can be configured in the egearmand.app
+application specification file or can be provided as options to the egearmand boot script.
+
+Other configuration options regarding persisten queues and extension can only we configured editing the
+file src/configuration.erl. Take a look at the comments.
+
+It must be edited before compiling.
+
+If you want to use persistent queues, you must create the replicated Mnesia schema before calling to gearmand:start().
+You can use mnesia_store:create_tables(), after initiating calling to mnesia:create_schema(configuration:gearmand_nodes()).
+
+=== compile
+
+$rake
+
+Optionally, if you want to build the extensions (take into account that you must meet the required dependencies) edit
+src/configuration.erl adding the desired extensions and try:
+
+$rake extensions
+
+=== running
+
+./egearmand [-host host] [-port port] [-log path] [-level (debug | info | warning | error)]
+
+=== examples
+
+The distribution includes some examples of clients and workers using to test the server and the RabbitMQ extension.
+The examples are coded in Ruby, and use the xing-gearman-ruby gem to work. You can obtain it from github: git://github.com/xing/gearman-ruby.git
+
+=== clustering
+
+A cluster of Egearmand servers is formed by a master node and a set of slave nodes. The file egearmand.app must be edited in the master node
+to state the node names of the slave nodes, the slave parameter in that file must be set to false. For instance:
+
+{application,egearmand,
+ [{description,"gearman server"},
+  {vsn,"0.6.5"},
+  {modules,[client_proxy, configuration, connections, functions_registry, gearmand, gearmand_supervisor,
+            jobs_queue_server, lists_extensions, log, mnesia_store, poplists_extensions, protocol, mnesia_store, tests, worker_proxy, administration]},
+  {registered,[inets_sup, httpc_manager]},
+  {applications,[kernel,stdlib, mnesia]},
+  {env, [{nodes, ['slave@laptop.local']}]},
+  {mod,{egearmand_app,[ {host, "localhost"},
+                        {port, 4730},
+                        {level, info},
+                        {method, file},
+                        {path, "egearmand.log"},
+                        {check_nodes, false},
+                        {slave, false}]}}]}.
+
+
+This .app file states that a master serve will be started in this node and that a slave node must be started in the node 'vbox@laptop.local'.
+
+In the slave node, the .app file must be edited with an empty list of nodes and the slave parameter to true:
+
+{application,egearmand,
+ [{description,"gearman server"},
+  {vsn,"0.6.5"},
+  {modules,[client_proxy, configuration, connections, functions_registry, gearmand, gearmand_supervisor,
+            jobs_queue_server, lists_extensions, log, mnesia_store, poplists_extensions, protocol, mnesia_store, tests, worker_proxy, administration]},
+  {registered,[inets_sup, httpc_manager]},
+  {applications,[kernel,stdlib, mnesia]},
+  {env, [{nodes, []}]},
+  {mod,{egearmand_app,[ {host, "localhost"},
+                        {port, 4730},
+                        {level, info},
+                        {method, file},
+                        {path, "egearmand.log"},
+                        {check_nodes, true},
+                        {slave, true}]}}]}.
+
+Now, in each machine where the slaves nodes are going to be executed, an Erlang node with the correct full name must be started:
+
+laptop$ erl -pa path/to/egearmand/ebin -name vbox@laptop.local -setcookie test
+
+Once all the slave nodes are running, the master node can be started with the egearmand script as usual:
+
+server$ ./egearmand -level debug -name master@server.local -setcookie test
+
+The master node will start the supervisor tree for the slave instances of egearmand.
