@@ -9,4 +9,5 @@
 
 all_test_() ->           
     [{module, 'proplists_extensions'},
-     {module, 'lists_extensions'}].
+     {module, 'lists_extensions'},
+     {module, 'store'}].

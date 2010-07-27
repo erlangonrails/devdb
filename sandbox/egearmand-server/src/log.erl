@@ -74,7 +74,13 @@ msg(Level, Msg) ->
 
 %% Callbacks
 
-
+%% @doc
+%% 根据参数Options初始化Log系统.
+%%
+%% 支持的选项:
+%% {method, Method} file, stdout
+%% {path, Path} (配合file类型的日志使用)
+%% {level, Level} debug, info, warning, error
 init(Options) ->
     LoggerMethod = proplists:get_value(method, Options),
     State = if LoggerMethod =:= file ->
@@ -87,7 +93,7 @@ init(Options) ->
             end,
     {ok, [{level, proplists:get_value(level, Options)} | State]} .
 
-
+%% 更具Level决定是否记录日志
 handle_cast({Level, Msg}, State) ->
     case should_log_p(Level,State) of
         true  -> process(Msg, State) ;
