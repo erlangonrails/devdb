@@ -1,0 +1,34 @@
+原理:
+当用户发送ping包的时候, 增加一个<onlinetime>N</onlinetime>字段, 表示用户在线时间的倍数,
+目前客户端每30秒发送一个ping包, 所以用户附加在线时间的计算方式是(N-1)*30, 这个数据会累计到
+用户总的在线时间.
+
+这些累计的数据会记录在mnesia表onlinetime中, 这个表是所有ejabberd node共享的.
+
+
+1. 
+============================================
+原来的ping包结构:
+C -> S 客户端ping服务器
+<iq from="uuu@91guoguo.com" to="91guoguo.com" type="get" id="52">
+  <ping xmlns="urn:xmpp:ping"/>
+</iq>
+
+S -> C 服务器返回结果
+<iq from='91guoguo.com' to='uuu@91guoguo.com/call' id='52' type='result'/>
+============================================
+
+
+2. 
+============================================
+包含了积分倍数的ping包结构:
+C -> S 客户端ping服务器 (N可以是任意的数字倍数)
+<iq from="uuu@91guoguo.com" to="91guoguo.com" type="get" id="52">
+  <ping xmlns="urn:xmpp:ping">
+      <onlinetime>N</onlinetime>
+  </ping>
+</iq>
+
+S -> C 服务器返回结果
+<iq from='91guoguo.com' to='uuu@91guoguo.com/call' id='52' type='result'/>
+============================================
