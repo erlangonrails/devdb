@@ -1,0 +1,147 @@
+ejabberd.log
+
+<1> 修改昵称 - liqiangtest6@91guoguo.com
+、?﹏丶小雪 
+
+注意观察收到的数据, 其中1,1,1,1,1,1,1(UTF8编码)对应的是, 就是这一串数据导致
+XML格式错误, 解析返回{error,{4,"not well-formed (invalid token)"}}
+
+=INFO REPORT==== 2010-07-29 11:44:01 ===
+D(<0.17015.0>:ejabberd_receiver:320) : Received XML on stream = [60,112,114,
+                                                                 101,115,101,
+                                                                 110,99,101,
+                                                                 62,60,115,
+                                                                 104,111,119,
+                                                                 62,99,104,97,
+                                                                 116,60,47,
+                                                                 115,104,111,
+                                                                 119,62,60,
+                                                                 115,116,97,
+                                                                 116,117,115,
+                                                                 62,1,1,1,1,1,
+                                                                 1,1,227,128,
+                                                                 129,238,159,
+                                                                 190,63,239,
+                                                                 185,143,238,
+                                                                 159,190,228,
+                                                                 184,182,238,
+                                                                 159,190,238,
+                                                                 159,190,229,
+                                                                 176,143,233,
+                                                                 155,170,32,
+                                                                 60,47,115,
+                                                                 116,97,116,
+                                                                 117,115,62,
+                                                                 60,47,112,
+                                                                 114,101,115,
+                                                                 101,110,99,
+                                                                 101,62]
+
+=INFO REPORT==== 2010-07-29 11:44:01 ===
+D(<0.17015.0>:shaper:61) : State: {maxrate,1000,288.0431953685713,
+                                      1280375031727630}, Size=91
+M=53.1555467718659, I=9534.427
+
+
+=INFO REPORT==== 2010-07-29 11:44:01 ===
+D(<0.17016.0>:ejabberd_c2s:1473) : Send XML on stream = "<stream:error><xml-not-well-formed xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error>"
+
+<2> 修改昵称
+=INFO REPORT==== 2010-07-29 11:44:13 ===
+D(<0.17017.0>:ejabberd_receiver:320) : Received XML on stream = [60,112,114,
+                                                                 101,115,101,
+                                                                 110,99,101,
+                                                                 62,60,115,
+                                                                 104,111,119,
+                                                                 62,99,104,97,
+                                                                 116,60,47,
+                                                                 115,104,111,
+                                                                 119,62,60,
+                                                                 115,116,97,
+                                                                 116,117,115,
+                                                                 62,1,1,1,1,1,
+                                                                 1,1,227,128,
+                                                                 129,238,159,
+                                                                 190,63,239,
+                                                                 185,143,238,
+                                                                 159,190,228,
+                                                                 184,182,238,
+                                                                 159,190,238,
+                                                                 159,190,229,
+                                                                 176,143,233,
+                                                                 155,170,32,
+                                                                 60,47,115,
+                                                                 116,97,116,
+                                                                 117,115,62,
+                                                                 60,47,112,
+                                                                 114,101,115,
+                                                                 101,110,99,
+                                                                 101,62]
+
+=INFO REPORT==== 2010-07-29 11:44:13 ===
+D(<0.17017.0>:shaper:61) : State: {maxrate,1000,996.612044398266,
+                                      1280375053402405}, Size=91
+M=90.69273703353066, I=453.602
+
+
+=INFO REPORT==== 2010-07-29 11:44:13 ===
+D(<0.17018.0>:ejabberd_c2s:1473) : Send XML on stream = "<stream:error><xml-not-well-formed xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error>"
+
+<3> 发送message消息
+、?﹏丶小雪 放在消息中发送, 因为这串字符被转换成了RTF格式\\'01\\'01\\'01\\'01\\'01\\'01\\'01\\, 
+可以正确解析.
+
+=INFO REPORT==== 2010-07-29 11:43:51 ===
+D(<0.17015.0>:ejabberd_receiver:320) : Received XML on stream = "<message to=\"liqiangtest6@91guoguo.com\" type=\"chat\" id=\"28\"><body>{\\rtf1\\ansi\\ansicpg936\\deff0\\deflang1033\\deflangfe2052{\\fonttbl{\\f0\\fscript\\fprq3\\fcharset134 \\'cb\\'ce\\'cc\\'e5;}}\r\n{\\colortbl ;\\red171\\green171\\blue171;}\r\n\\viewkind4\\uc1\\pard\\cf1\\lang2052\\f0\\fs19\\'01\\'01\\'01\\'01\\'01\\'01\\'01\\'a1\\'a2\\'a9\\'a1?\\'a9\\'6e\\'a9\\'a1\\'d8\\'bc\\'a9\\'a1\\'a9\\'a1\\'d0\\'a1\\'d1\\'a9 \\par\r\n}\r\n</body><active xmlns=\"http://jabber.org/protocol/chatstates\"/></message>"
+
+=INFO REPORT==== 2010-07-29 11:43:51 ===
+D(<0.17015.0>:shaper:61) : State: {maxrate,1000,161.49036973841436,
+                                      1280375030656708}, Size=444
+M=241.49995882089945, I=1070.917
+
+
+=INFO REPORT==== 2010-07-29 11:43:51 ===
+D(<0.17016.0>:ejabberd_router:313) : route
+	from {jid,"liqiangtest6","91guoguo.com","call","liqiangtest6",
+                  "91guoguo.com","call"}
+	to {jid,"liqiangtest6","91guoguo.com",[],"liqiangtest6",
+                "91guoguo.com",[]}
+	packet {xmlelement,"message",
+                   [{"xml:lang","*"},
+                    {"to","liqiangtest6@91guoguo.com"},
+                    {"type","chat"},
+                    {"id","28"}],
+                   [{xmlelement,"body",[],
+                        [{xmlcdata,
+                             <<"{\\rtf1\\ansi\\ansicpg936\\deff0\\deflang1033\\deflangfe2052{\\fonttbl{\\f0\\fscript\\fprq3\\fcharset134 \\'cb\\'ce\\'cc\\'e5;}}\n{\\colortbl ;\\red171\\green171\\blue171;}\n\\viewkind4\\uc1\\pard\\cf1\\lang2052\\f0\\fs19\\'01\\'01\\'01\\'01\\'01\\'01\\'01\\'a1\\'a2\\'a9\\'a1?\\'a9\\'6e\\'a9\\'a1\\'d8\\'bc\\'a9\\'a1\\'a9\\'a1\\'d0\\'a1\\'d1\\'a9 \\par\n}\n">>}]},
+                    {xmlelement,"active",
+                        [{"xmlns","http://jabber.org/protocol/chatstates"}],
+                        []}]}
+
+<4> 发送message消息
+=INFO REPORT==== 2010-07-29 11:43:46 ===
+D(<0.17015.0>:ejabberd_receiver:320) : Received XML on stream = "<message to=\"liqiangtest6@91guoguo.com\" type=\"chat\" id=\"24\"><body>{\\rtf1\\ansi\\ansicpg936\\deff0\\deflang1033\\deflangfe2052{\\fonttbl{\\f0\\fscript\\fprq3\\fcharset134 \\'cb\\'ce\\'cc\\'e5;}}\r\n{\\colortbl ;\\red171\\green171\\blue171;}\r\n\\viewkind4\\uc1\\pard\\cf1\\lang2052\\f0\\fs19\\'01\\'01\\'01\\'01\\'01\\'01\\'01\\'a1\\'a2\\'a9\\'a1?\\'a9\\'6e\\'a9\\'a1\\'d8\\'bc\\'a9\\'a1\\'a9\\'a1\\'d0\\'a1\\'d1\\'a9 \\par\r\n}\r\n</body><active xmlns=\"http://jabber.org/protocol/chatstates\"/></message>"
+
+=INFO REPORT==== 2010-07-29 11:43:46 ===
+D(<0.17015.0>:shaper:61) : State: {maxrate,1000,288.3723333992512,
+                                      1280375024793552}, Size=444
+M=259.4022103427279, I=1484.319
+
+
+=INFO REPORT==== 2010-07-29 11:43:46 ===
+D(<0.17016.0>:ejabberd_router:313) : route
+	from {jid,"liqiangtest6","91guoguo.com","call","liqiangtest6",
+                  "91guoguo.com","call"}
+	to {jid,"liqiangtest6","91guoguo.com",[],"liqiangtest6",
+                "91guoguo.com",[]}
+	packet {xmlelement,"message",
+                   [{"xml:lang","*"},
+                    {"to","liqiangtest6@91guoguo.com"},
+                    {"type","chat"},
+                    {"id","24"}],
+                   [{xmlelement,"body",[],
+                        [{xmlcdata,
+                             <<"{\\rtf1\\ansi\\ansicpg936\\deff0\\deflang1033\\deflangfe2052{\\fonttbl{\\f0\\fscript\\fprq3\\fcharset134 \\'cb\\'ce\\'cc\\'e5;}}\n{\\colortbl ;\\red171\\green171\\blue171;}\n\\viewkind4\\uc1\\pard\\cf1\\lang2052\\f0\\fs19\\'01\\'01\\'01\\'01\\'01\\'01\\'01\\'a1\\'a2\\'a9\\'a1?\\'a9\\'6e\\'a9\\'a1\\'d8\\'bc\\'a9\\'a1\\'a9\\'a1\\'d0\\'a1\\'d1\\'a9 \\par\n}\n">>}]},
+                    {xmlelement,"active",
+                        [{"xmlns","http://jabber.org/protocol/chatstates"}],
+                        []}]}
