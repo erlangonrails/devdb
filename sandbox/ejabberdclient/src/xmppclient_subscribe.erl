@@ -72,7 +72,9 @@ process_subscribe_in(MySession, Jid, Res) ->
 		      "unsubscribed"
               end,
     Data = io_lib:format(
-           "<presence type='~s' to ='~s'/>", [ResData, Jid]),
+           "<presence type='~s' to ='~s'>" ++
+	     "<status>this is response message with the process subscribe</status>"++ 
+	   "</presence>", [ResData, Jid]),
     xmppclient_util:send_string(MySession, Data).
 
     
