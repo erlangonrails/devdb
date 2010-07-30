@@ -1,0 +1,82 @@
+==================================
+果果添加好友的逻辑
+==================================
+
+============================================================
+客户端要做的工作:
+<1>根据<presence>协议更新客户端逻辑.
+       即当用户添加好友的时候, 对方的处理结果（同意/不同意），以及理由都要显示出来.
+
+<2>根据item的subscription属性过滤显示联系人列表的UI.
+       目前果果客户端Roster这部分有点小问题，当前版本当用户添加好的时候, 即使对方
+       不同意，仍然会把对方添加到自己的Roster中显示出来, 没有根据itemsubscription
+       属性过滤.
+       
+      正确的做法是:
+      根据roster中item的subscription属性进行该过滤, subscription为
+      none或者from的联系人不应该在UI中显示, 应为这部分联系人的出席状态用户
+      是接收不到的.
+     例如:
+     <item ask="subscribe" subscription="none" jid="user2@91guoguo.com"/> 
+============================================================
+
+
+
+============================================================
+服务器调整:
+a. 我们对针对XMPP presence协议的出席消息的订阅略微做了调整
+   当前的版本“添加好友” & “处理添加请求”的时候都支持附加消息.
+   并且附加消息<status>附加消息</status>这个字段是可选的.
+b. 文档只是针对订阅出席消息的描述, 没有包含(去掉了)roster变化的消息, 
+   在其它文档中单独描述.
+
+============================================================
+1. user1添加user2为好友, user2同意的流程
+<1> User1 -> Server (User1发送添加user2为好友的订阅请求)
+<presence type='subscribe' to ='user2@91guoguo.com'>
+  <status>这里是添加好友的附加消息</status>
+</presence>
+
+<2> Server -> User2 (服务器转发User1对User2的订阅请求)
+<presence xmlns="jabber:client" from="user1@91guoguo.com" to="user2@91guoguo.com/exmpp#1280474121200706" 
+    type="subscribe" id="session-2279526743">
+  <status>这里是添加好友的附加消息</status>
+</presence>
+
+<3> User2 -> Server (User2同意User1的请求)
+<presence type='subscribed' to ='user1@91guoguo.com'>
+  <status>同意添加为好友, 可以在这列添加消息 - 同意</status>
+</presence>
+
+<4> Server -> User1 (服务器转发User2对User1的答复)
+<presence xmlns="jabber:client" from="user2@91guoguo.com" to="user1@91guoguo.com/exmpp#1280474107428284" 
+    type="subscribed" id="session-2287126650">
+  <status>同意添加为好友, 可以在这列添加消息 - 同意</status>
+</presence>
+============================================================
+
+
+============================================================
+2. user1添加user2为好友, user2拒绝的流程
+<1> User1 -> Server (User1发送添加user2为好友的订阅请求)
+<presence type='subscribe' to ='user2@91guoguo.com'>
+  <status>这里是添加好友的附加消息</status>
+</presence>
+
+<2> Server -> User2 (服务器转发User1对User2的订阅请求)
+<presence xmlns="jabber:client" from="user1@91guoguo.com" to="user2@91guoguo.com/exmpp#1280487923693736" 
+    type="subscribe" id="session-1964470050">
+  <status>这里是添加好友的附加消息</status>
+</presence>
+
+<3> User2 -> Server (User2不同意User1的请求)
+<presence type='unsubscribed' to ='user1@91guoguo.com'>
+  <status>在这些填写不同意添加好友的理由 - 你不认识我:)</status>
+</presence>
+
+<4> Server -> User1 (服务器转发User2对User1的答复)
+<presence xmlns="jabber:client" from="user2@91guoguo.com" to="user1@91guoguo.com/exmpp#1280487920409835" 
+    type="unsubscribed" id="session-961775837">
+  <status>在这些填写不同意添加好友的理由 - 你不认识我:)</status>
+</presence>
+============================================================

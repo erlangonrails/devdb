@@ -441,28 +441,40 @@ do_route(From, To, Packet) ->
 				   [User, Server, From, subscribe, Reason]),
 				 true};
 			    "subscribed" ->
+                                Reason = xml:get_path_s(
+					   Packet,
+					   [{elem, "status"}, cdata]),
 				{is_privacy_allow(From, To, Packet) andalso
 				 ejabberd_hooks:run_fold(
 				   roster_in_subscription,
 				   LServer,
 				   false,
-				   [User, Server, From, subscribed, ""]),
+				   %% [User, Server, From, subscribed, ""]),
+                                   [User, Server, From, subscribed, Reason]), %% youbao私有扩展: <status>xxx</status>
 				 true};
 			    "unsubscribe" ->
+                                Reason = xml:get_path_s(
+					   Packet,
+					   [{elem, "status"}, cdata]),
 				{is_privacy_allow(From, To, Packet) andalso
 				 ejabberd_hooks:run_fold(
 				   roster_in_subscription,
 				   LServer,
 				   false,
-				   [User, Server, From, unsubscribe, ""]),
+				   %% [User, Server, From, unsubscribe, ""]), 
+                                   [User, Server, From, unsubscribe, Reason]), %% youbao私有扩展: <status>xxx</status>
 				 true};
 			    "unsubscribed" ->
+                                Reason = xml:get_path_s(
+					   Packet,
+					   [{elem, "status"}, cdata]),
 				{is_privacy_allow(From, To, Packet) andalso
 				 ejabberd_hooks:run_fold(
 				   roster_in_subscription,
 				   LServer,
 				   false,
-				   [User, Server, From, unsubscribed, ""]),
+				   %% [User, Server, From, unsubscribed, ""]),
+                                   [User, Server, From, unsubscribed, Reason]), %% youbao私有扩展: <status>xxx</status>
 				 true};
 			    _ ->
 				{true, false}

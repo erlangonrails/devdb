@@ -37,6 +37,7 @@
 	 process_item/2,
 	 in_subscription/6,
 	 out_subscription/4,
+         out_subscription/5,
 	 register_user/2,
 	 remove_user/2,
 	 list_groups/1,
@@ -344,6 +345,12 @@ get_jid_info({Subscription, Groups}, User, Server, JID) ->
 
 in_subscription(Acc, User, Server, JID, Type, _Reason) ->
     process_subscription(in, User, Server, JID, Type, Acc).
+
+%% 纯粹为了hook兼容:
+%% 我们修改了ejabberd_c2s中的hook: roster_out_subscription
+%% 函数参数从4变成了5, 这里的修改是为了保持兼容.
+out_subscription(UserFrom, ServerFrom, JIDTo, Type, _YoubaoExt) ->
+    out_subscription(UserFrom, ServerFrom, JIDTo, Type).
 
 out_subscription(UserFrom, ServerFrom, JIDTo, unsubscribed) ->
     Mod = get_roster_mod(ServerFrom),

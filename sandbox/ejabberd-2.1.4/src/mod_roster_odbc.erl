@@ -46,6 +46,7 @@
 	 get_in_pending_subscriptions/3,
 	 in_subscription/6,
 	 out_subscription/4,
+         out_subscription/5,
 	 set_items/3,
 	 remove_user/2,
 	 get_jid_info/4,
@@ -522,7 +523,11 @@ in_subscription(_, User, Server, JID, Type, Reason) ->
 out_subscription(User, Server, JID, Type) ->
     process_subscription(out, User, Server, JID, Type, []).
 
+out_subscription(User, Server, JID, Type, Reason) ->
+    process_subscription(out, User, Server, JID, Type, Reason).
+
 process_subscription(Direction, User, Server, JID1, Type, Reason) ->
+    ?DEBUG("youbao-process_subscription#~p", [Reason]),
     LUser = jlib:nodeprep(User),
     LServer = jlib:nameprep(Server),
     LJID = jlib:jid_tolower(JID1),
@@ -575,7 +580,7 @@ process_subscription(Direction, User, Server, JID1, Type, Reason) ->
 		AskMessage = case NewState of
 				 {_, both} -> Reason;
 				 {_, in}   -> Reason;
-				 _         -> ""
+                                 _         -> ""
 			     end,
 		case NewState of
 		    none ->
@@ -607,9 +612,12 @@ process_subscription(Direction, User, Server, JID1, Type, Reason) ->
 			    subscribed -> "subscribed";
 			    unsubscribed -> "unsubscribed"
 			end,
+                    ?DEBUG("youbao-log#~p,~p", [T, Reason]),
 		    ejabberd_router:route(
 		      jlib:make_jid(User, Server, ""), JID1,
-		      {xmlelement, "presence", [{"type", T}], []})
+		      %% {xmlelement, "presence", [{"type", T}], []})
+                      {xmlelement, "presence", [{"type", T}], [{xmlelement,"status",[],
+                                                                [{xmlcdata, Reason}]}]}) %% youbao扩展
 	    end,
 	    case Push of
 		{push, Item} ->

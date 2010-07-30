@@ -1775,9 +1775,10 @@ presence_track(From, To, Packet, StateData) ->
 				To, Packet),
 	    StateData;
 	"subscribed" ->
+            Reason = xml:get_path_s(Packet, [{elem, "status"}, cdata]), %% youbao私有扩展: <status>xxx</status>
 	    ejabberd_hooks:run(roster_out_subscription,
 			       Server,
-			       [User, Server, To, subscribed]),
+			       [User, Server, To, subscribed, Reason]),
 	    check_privacy_route(From, StateData, jlib:jid_remove_resource(From),
 				To, Packet),
 	    StateData;
@@ -1789,9 +1790,10 @@ presence_track(From, To, Packet, StateData) ->
 				To, Packet),
 	    StateData;
 	"unsubscribed" ->
+            Reason = xml:get_path_s(Packet, [{elem, "status"}, cdata]), %% youbao私有扩展: <status>xxx</status>
 	    ejabberd_hooks:run(roster_out_subscription,
 			       Server,
-			       [User, Server, To, unsubscribed]),
+			       [User, Server, To, unsubscribed, Reason]),
 	    check_privacy_route(From, StateData, jlib:jid_remove_resource(From),
 				To, Packet),
 	    StateData;
