@@ -23,4 +23,6 @@ get_value(Key, List, Defaults) ->
 
 %% tests
 get_value_test() ->
+    ?assertEqual(get_value(key1, [{key1, val1}], []), val1),
+    ?assertEqual(get_value(key1, [{key1, val1}, {key2, val2}], []), val1),
     ?assertEqual(get_value(key1, [], [{key1,valdefault}]), valdefault) .

@@ -45,7 +45,7 @@ unique(List) ->
 
 
 %% @doc
-%% 将一个lists拆分成最代元素为Max的sublists的集合.
+%% 将一个lists拆分成最大元素为Max的sublists的集合.
 %%
 %% 例子:
 %% lists_extensions:splice(4, []) -> []

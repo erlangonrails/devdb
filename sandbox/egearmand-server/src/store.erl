@@ -2,18 +2,19 @@
 
 -include_lib("eunit/include/eunit.hrl") .
 
--export([insert/3, next/2, dequeue/2, delete/3, all/2, delete_if/2, dequeue_if/2, alter/2, detect_if/2]) .
+-export([insert/3, next/2, dequeue/2, delete/3, all/2, delete_if/2, dequeue_if/2, alter/2, detect_if/2, delete_from_all/2]) .
 
 %% @doc
-%% 每个Key对应的Val集合都是一个Queue.
+%% 每个Key对应的Val集合都是一个Queue, 本质上是一个Queue的集合.
+%% 内部是一个{ Key :: atom(), [any()]}的列表, 其中的[any()]是Key对应的Val的集合.
 
 %% @doc
-%% 向Queue中插入一条记录:
+%% 向Queue中插入一条记录, 返回一个新的Queue.
 %% Key -> atom()
 %% Val -> [any()] (Val是一个列表, 里面的元素可以重复)
 %%
 %% 例子:
-%% Q = store:insert(key1, val11, []) -> [{key1,[val11]}]
+%% Q = store:insert(key1, val11, []) -> [{key1,[val11]}] 
 %% Q1 = store:insert(key1, val11, Q) -> [{key1,[val11,val11]}]
 %% Q2 = store:insert(key1, val12, Q1) -> [{key1,[val11,val11,val12]}]
 %% Q3 = store:insert(key2, val21, Q2) -> [{key2,[val21]},{key1,[val11,val11,val12]}]
@@ -38,7 +39,7 @@ insert(Key,Value,Queues) ->
 %% {V3, Q3} = store:next(key1, Q2) -> {val3,[{key1,[val1,val2,val3]},{a,[vala]}]}
 %% {V4, Q4} = store:next(key1, Q3) -> {val1,[{key1,[val2,val3,val1]},{a,[vala]}]}
 
--spec(next(atom(), [{atom(),[any()]}]) -> {atom(), [{atom(),[any()]}]}) .
+-spec(next(atom(), [{atom(),[any()]}]) -> {any(), [{atom(),[any()]}]}) .
 
 next(Key,Queues) ->
     DoNext = fun(_F,_K,[],_A)               -> not_found ;
@@ -49,7 +50,8 @@ next(Key,Queues) ->
 
 
 %% @doc
-%% 遍历 & 删除Key对应的Val.
+%% 遍历 & 删除Key对应的Val(删除最先插入的value)
+%% 返回{Val, NewQueue}
 %% (对比next/2)
 %%
 %% 例子:
@@ -59,9 +61,9 @@ next(Key,Queues) ->
 %% {V3, Q3} = store:dequeue(key1, Q2) -> {val3,[{key1,[]},{a,[vala]}]}   %% 注意: 此时的key1对应的Val列表为空[]
 %% {V4, Q4} = store:dequeue(key1, Q3) -> {not_found,[{a,[vala]},{key1,[]}]}
 
--spec(dequeue(atom(), [{atom(),[any()]}]) -> {atom(), [{atom(),[any()]}]}) .
+-spec(dequeue(atom(), [{atom(),[any()]}]) -> {any(), [{atom(),[any()]}]}) .
 
-dequeue(Key,Queues) ->
+dequeue(Key, Queues) ->
     DoDequeue = fun(_F,_K,[],A)               -> {not_found, A};
                    (_F,K,[{K,[VH|VR]} | R], A) -> {VH, [{K, VR} | R] ++ A} ; %% we found the queue
                    (F,K,[{_K,_Vs} = H | R], A) -> F(F,K,R,[H|A])
@@ -87,7 +89,8 @@ all(Key,Queues) ->
 
 
 %% @doc
-%% 从Queue中删除一条记录
+%% 从Queue中删除一条记录, 返回一个新的Queue.
+%% (如果有多条key-val记录, 则删除第一条, 也就是删除最先插入的key-val记录)
 %%
 %% 例子:
 %% Q = [{key1, [val1, val2, val3]}, {a, [vala]}], %% 插入顺序为val1, val2, val3
@@ -110,6 +113,15 @@ delete(Key,Value, Queues) ->
 %% @doc
 %% Deletes one value from all the queues if the
 %% given predicate P returns true.
+%% 返回处理后的Queue.
+%%
+%% TODO: 实现逻辑错误..
+%%
+%% 例子:
+%% Q = [{key1, [val1, val2, val3, val1]}, {key2, [val1, val2, val3, val4]}], 
+%% Q1 = store:delete_if(fun(X) -> X =:= val1 end, Q) -> [{key2,[val1]},{key1,[val2,val3]}]  %% TODO: 返回值错误, 实现逻辑错误, 需要修正.
+-spec(delete_if(fun(), [{atom(),[any()]}]) -> [{atom(),[any()]}]).
+
 delete_if(P, Queues) ->
     Pp = fun(X) -> not(P(X)) end,
     DoDeleteP = fun(_F,_Pr,[],A)            -> A ;
@@ -121,6 +133,13 @@ delete_if(P, Queues) ->
 %% @doc
 %% Deletes one value from all the queues if the
 %% given predicate P returns true.
+%% (和delete_if/2类似, 返回值不同, 返回{Val, NewQueue})
+%%
+%% 例子:
+%% Q = [{key1, [val1, val2, val3, val1]}, {key2, [val1, val2, val3, val4]}], 
+%% Q1 = store:delete_if(fun(X) -> X =:= val1 end, Q) -> {val1,[{key2,[val2,val3,val4]},{key1,[val2,val3]}]}
+-spec(dequeue_if(fun(), [{atom(),[any()]}]) -> {any(), {atom(),[any()]}}).
+
 dequeue_if(P, Queues) ->
     Pp = fun(X) -> not(P(X)) end,
     DoDeleteP = fun(_F, [], A) ->
@@ -138,8 +157,14 @@ dequeue_if(P, Queues) ->
 
 
 %% @doc
-%% Returns one value from all the queues if the
-%% given predicate P returns true.
+%% 检测所有的Queue, 返回一个满足条件P(X) -> true的Val.
+%%
+%% 例子:
+%% Q = [{key1, [val1, val2, val3, val1]}, {key2, [val1, val2, val3, val4]}],
+%% store:detect_if(fun(X) -> X =:= val1 end, Q) -> val1
+%% store:detect_if(fun(X) -> X =:= val7 end, Q) -> not_found
+-spec(detect_if(fun(), [{atom(),[any()]}]) -> {atom(),[any()]} | not_found).
+
 detect_if(P, Queues) ->
     DoDetect = fun(_F, []) ->
                         not_found ;
@@ -160,6 +185,8 @@ detect_if(P, Queues) ->
 %% the execution must go on in the list or {true, Vp} with the new
 %% value Vp for V if the execution must stop and Vp to be returned
 %% altogether with the updated list.
+%% 
+%% TODO: 分析逻辑
 -spec(alter(any(), [{atom(),[any()]}]) -> {any(), [{atom(),[any()]}]}).
 
 alter(P, Queues) ->
@@ -174,7 +201,13 @@ alter(P, Queues) ->
 
 
 %% @doc
-%% Deletes Value from all the Queues.
+%% 删除所有Queue中的Val元素
+%% (如果每个Queue中有多个Val元素, 只删除第一个).
+%%
+%% 例子:
+%% Q = [{key1, [val1, val2, val3, val1]}, {key2, [val1, val2, val3, val4]}],
+%% store:delete_from_all(val1, Q) -> [{key1,[val2,val3,val1]},{key2,[val2,val3,val4]}]
+%%
 -spec(delete_from_all(atom(), [{atom(),[any()]}]) -> [{atom(),[any()]}]).
 
 delete_from_all(Value,Queues) ->
@@ -253,49 +286,3 @@ delete_test() ->
     ?assertEqual(Q1, [{key1,[val2,val3]},{a,[vala]}]),
     ?assertEqual(Q2, [{key1,[val3]},{a,[vala]}]),
     ?assertEqual(Q3, [{key1,[]},{a,[vala]}]).
-
-
-detect_if_test() ->
-    Queue = insert(test,1,[]),
-    ?assertEqual(1,length(Queue)),
-    QueueB = insert(test,2,Queue),
-    Result= detect_if(fun(E) -> E =:= 1 end, QueueB),
-    ?assertEqual(1, Result),
-    ResultB= detect_if(fun(E) -> E =:= 3 end, QueueB),
-    ?assertEqual(not_found, ResultB) .
-
-alter_test() ->
-    Queue = insert(test,1,[]),
-    ?assertEqual(1,length(Queue)),
-    QueueB = insert(test,2,Queue),
-    {Result,QueueC} = alter(fun(E) ->
-                                    if
-                                        E =:= 1 -> {true, E + 1} ;
-                                        true    -> {false, E}
-                                    end
-                            end, QueueB),
-    ?assertEqual(2,Result),
-    ?assertEqual(1,length(QueueC)),
-    {_K,Vs} = lists:nth(1,QueueC),
-    ?assertEqual(2,length(Vs)) ,
-    ?assertEqual([2,2], Vs) .
-
-deletion_from_all_test() ->
-    Queue = insert(test,1,[]),
-    QueueB = insert(test,2,Queue),
-    QueueC = insert(test_2,1,QueueB),
-    QueueD = delete_from_all(1,QueueC),
-    lists:foreach(fun({_K,V}) ->
-                          ?assertEqual(false, lists:any(fun(Vp) ->
-                                                                Vp =:= 1
-                                                        end, V))
-                  end,QueueD) .
-
-dequeue_if_test() ->
-    Queues = [{a,[1,2,3,4]}, {b,[1,2,3]}, {c,[5,6,7]}],
-    {Val,Queuesp} = dequeue_if(fun(X) -> X=:=2 end, Queues),
-    ?assertEqual(2,Val),
-    ?assertEqual(3, length(Queuesp)),
-    lists:foreach(fun({_Id,Es}) ->
-                          ?assertEqual(false, lists:any(fun(E) -> E=:=2 end, Es))
-                  end, Queuesp) .
