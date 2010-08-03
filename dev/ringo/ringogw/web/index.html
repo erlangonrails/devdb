@@ -1,0 +1,61 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+ "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+   <title>ringo status</title>
+   <link rel="stylesheet" href="reset-fonts-grids.css" type="text/css">
+   <link rel="stylesheet" href="style.css" type="text/css">
+   
+   <script type="text/javascript" src="jquery-1.2.1.js"></script>
+   <script type="text/javascript" src="jquery-dom.js"></script>
+   <script type="text/javascript" src="typewatch1.1.js"></script> 
+
+   <script type="text/javascript" src="ringomon.js"></script>
+</head>
+<body>
+<div id="doc3" class="yui-t7">
+   <div id="hd"><h1>ringo status</h1></div>
+   <div id="bd">
+	<div class="yui-g">
+    <div class="yui-g first">
+        <div class="yui-u first">
+                <div class="rtitle" id="ringtitle">Ring</div>
+                <div class="rcolumn">
+                <div class="listbox" id="ringlist"></div>
+                </div>
+                <div class="legend">disk: used / use% / inode use% / vm mem</div>
+        </div>
+        <div class="yui-u">
+                <div class="rtitle" id="domaintitle">Domains</div>
+                <div class="rcolumn" id="domainbox">
+                <div class="listbox"> 
+                <input id="domainfilter" type="text"></input>
+                <div id="domainlist"> 
+                </div>
+                </div>
+                </div>
+	</div>
+    </div>
+    <div class="yui-u">
+        <div class="rtitle">Domain status</div>
+        <div class="rcolumn">
+        <div class="listbox" id="domainstat">
+        <table>
+        <thead><tr><th></th><th>this domain</th><th>owner</th></tr></thead>
+        <tbody>
+        <!--
+        <tr><td>hash</td><td>438dae454cd32<td><td>234eac3423e32</td></tr>
+        <tr><td># entries</td><td>234<td><td>234r</td></tr>
+        -->
+        </tbody>
+        </table>
+        </div>
+        </div>
+    </div>
+</div>
+
+	</div>
+   <div id="ft"></div>
+</div>
+</body>
+</html>

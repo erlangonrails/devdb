@@ -1,0 +1,160 @@
+
+body {
+        background: #ffffff;
+        color: #000000;
+        font-family: Verdana, "Bitstream Vera Sans", sans-serif;
+	line-height: 1.8em;
+        margin-left: 20px;
+}
+
+#hd h1{
+        margin-top: 50px;
+        font-size: 250%;
+        height: 50px;
+}
+
+.rcolumn{
+        border: 1px solid #666;
+        height: 500px;
+        padding-top: 10px;
+}
+
+.rtitle{
+        background: #333;
+        color: white;
+        padding-left: 5px;
+        text-align: left;
+}
+
+.listbox{
+        height: 100%;
+        overflow: auto;
+        white-space: nowrap;
+}
+
+.rcolumn input{
+        border: 1px solid #aaa;
+        width: 90%;
+        margin-bottom: 10px;
+}
+
+#nodelist{
+}
+
+.legend{
+        color: #666;
+        font-size: 90%;
+        line-height: 1em;
+        margin-top: 10px;
+        margin-left: 5px;
+}
+
+#domainstat table{
+        margin-left: 20px;
+        display: none;
+}
+
+#domainstat table thead th{
+        color: #8f138b;
+        font-weight: bold;
+}
+
+#domainstat table .rowhead{
+        color: #8f138b;
+        font-weight: bold;
+}
+
+#domainstat table td{
+        padding-right: 20px;
+        vertical-align: top;
+}
+
+.row_expands{
+        cursor: pointer;
+}
+
+.row_expands:hover{
+        background: #FFDE00; 
+}
+
+#domainbox{
+        text-align: center;
+}
+
+#domainlist{
+        text-align: left;
+}
+
+.domain{
+        color: #8f138b;
+}
+
+.chunk{
+        color: black;
+}
+
+.listitem{
+        cursor: pointer;
+        padding-left: 10px;
+        padding-right: 10px;
+        line-height: 1em;        
+        padding-top: 5px;
+        padding-bottom: 5px;
+
+}
+
+.chosen{
+        background: #FFF7BF;
+}
+
+#ownritem{
+        color: #8f138b;
+        font-weight: bold;
+}
+
+.replitem{
+        padding-left: 25px;
+}
+
+.listitem:hover{
+        background: #FFDE00; 
+}
+
+.domain_inactive{
+        background: #f6f6f6; 
+}
+
+.warn{
+        background: #FFC9BF;
+}
+
+.nodenfo{
+        color: #8f138b;
+	line-height: 1.0em;
+        margin-left: 20px;
+        font-size: 90%;
+}
+
+.domainnfo{
+	line-height: 1.0em;
+        margin-left: 20px;
+        font-size: 90%;
+}
+
+#ringlist{
+}
+
+.hexid{
+        text-transform: uppercase;
+        font-size: 90%;
+        color: black;
+}
+
+.host{
+        color: #8f138b;
+}
+
+.tstamp{
+        color: #8f138b;
+        font-size: 90%;
+}
