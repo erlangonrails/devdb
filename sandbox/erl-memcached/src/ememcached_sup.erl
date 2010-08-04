@@ -1,6 +1,6 @@
 -module(ememcached_sup).
 
-% Supervisor of the ememcached listener
+% ememcached的监控进程
 
 -behaviour(supervisor).
 

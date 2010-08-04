@@ -1,0 +1,123 @@
+1. 是一个memcached的erlang版本的实现, 目前版本支持的命令有:
+set, add, replace, get, incr, decr, delete, flush_all, quit
+
+
+2. 使用telnet作为客户端:
+<1> set
+set <key> <flags> <exptime> <bytes>\r\n
+<data block>\r\n
+成功返回"STORED\r\n"
+
+<2> add
+add <key> <flags> <exptime> <bytes>\r\n
+<data block>\r\n
+成功返回"STORED\r\n"
+
+<3> replace
+replace <key> <flags> <exptime> <bytes>\r\n
+<data block>\r\n
+成功返回"STORED\r\n"
+
+<4> get
+get <key>*\r\n
+<key>*表示一个或多个键值, 由空格隔开的字串
+
+服务器用以下形式发送每项内容
+VALUE <key> <flags> <bytes>\r\n
+<data block>\r\n
+所有项目传送完毕后, 服务器发送以下字串
+"END\r\n"
+来指示回应完毕
+(如果没有找到任何key对应的数据, 则直接返回"END\r\n")
+
+<5> incr
+incr <key> <value>\r\n
+回复为以下几种情形:
+"NOT_FOUND\r\n" 指示该项内容的值, 不存在
+<value>\r\n <value>是增加/减少 
+
+<6> decr
+decr <key> <value>\r\n
+回复为以下几种情形:
+"NOT_FOUND\r\n" 指示该项内容的值, 不存在
+<value>\r\n <value>是增加/减少 
+
+注意"decr"命令发生下溢：
+如果客户端尝试减少的结果小于0时, 结果会是0. "incr"命令不会发生溢出
+
+<7> delete
+delete <key>\r\n
+<key> 是客户端希望服务器删除的内容的键名
+
+此命令有一行回应：
+"DELETED\r\n"表示执行成功
+"NOT_FOUND\r\n"表示没有找到这项内容
+
+<8> flush_all
+flush_all\r\n
+它总是执行成功, 服务器会发送“OK\r\n”回应.
+
+<9> quit
+quit\r\n
+
+3. 使用telnet作为客户端:
+<1> set
+set key1 32 10 10
+abcdeabcde
+STORED
+
+<2> add
+a. 如果key1不存在
+add key1 32 10 10
+abcdeabcde
+STORED
+b. 如果key1存在
+add key1 32 10 10
+abcdeabcde
+NOT_STORED
+
+<3> replace
+a. 如果key1存在
+add key1 32 10 10
+abcdeabcde
+STORED
+b. 如果key1不存在
+add key1 32 10 10
+abcdeabcde
+NOT_STORED
+
+<4> get
+a. 获取数据成功
+get key1
+VALUE key1 32 10
+abcdeabcde
+END
+b. 没有获取到数据(数据不存在或者过期)
+get key1
+END
+
+<5> incr
+set key1 32 0 2 
+23
+STORED
+incr key1 10
+33
+incr key2 10
+NOT_FOUND
+
+<6> decr
+decr key1 3
+30
+
+<7> delete
+delete key1
+DELETED
+delete key2
+NOT_FOUND
+
+<8> flush_all
+flush_all
+OK
+
+<9> quit
+quit

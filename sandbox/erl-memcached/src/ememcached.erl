@@ -1,7 +1,6 @@
 -module(ememcached).
 -include("erl_logger.hrl").
 
-%% Application callbacks
 -export([start/0, stop/0]).
 -export([get_config/2]).
 

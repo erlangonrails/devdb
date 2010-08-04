@@ -1,6 +1,6 @@
 -module(ememcached_app).
 
-% Start the ememcached application
+% 启动ememcached application
 
 -behaviour(application).
 

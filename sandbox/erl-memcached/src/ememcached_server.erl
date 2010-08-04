@@ -1,6 +1,92 @@
 -module(ememcached_server).
 
-% Code for the threads that handle client connexions
+%% 负责于客户端交互, 接收客户端发来的数据, 解析memcached协议, 
+%% 调用存储引擎读取或者存储数据, 发送处理结果给客户端.
+%% 在实现上本质是一个gen_fsm, 有几个不同的状态, 我们会创建一个单独的进程来不断的调用gen_tcp:recv(Socket, 0)
+%% 接收数据, 并解析, 每次解析出一行数据, 则发送给FSM进程处理, 并继续接收数据, 所以Socket进程和fsm进程是一对一的关系.
+%%
+%% (Socket进程  -> LINE MSG ->  FSM进程)
+%% 
+%% 1. 如何解析基于行数据的协议?
+%%    memcached是基于行的协议, 命令行以\r\n结尾, 如何从数据流(list)中解析出一行数据, 实现如下:
+%%    基于文本行的协议都可以用这种方式来解析出一行数据.
+%%
+%% read_line("abc") -> noline.
+%% read_line("abc\r\ndddd") -> {line, "abc", "dddd"}.
+%%
+%% 实现:
+%% read_line(Data) ->
+%%     read_line(Data, "").
+%% read_line("", _Line) ->
+%%     noline;
+%% read_line("\r\n" ++ Data, Line) ->
+%%     {line, lists:reverse(Line), Data};
+%% read_line([Char|Data], Line) ->
+%%     read_line(Data, [Char | Line]).
+%%
+%% 2. memcached协议数据分为两类: 文本行数据和自由数据, 这两类数据都是用\r\n结尾的.
+%%    我们如何从Socket中接收并解析出这些数据? 看下面的实现代码:
+%%    不断的调用gen_tcp:recv/2接收数据, 每接收到一个数据包, 把上次解析剩下的数据和这次接收到的数据组合, 
+%%    解析出其中的'行数据(可能是一行, 也可能是多行)', 解析完成后继续接收.
+%%
+%% receive TCP packets
+%% 注意: 参数Data是上次process_packet解析完之后'剩下'的没有处理的数据, 继续处理.
+%% loop(FSM_Pid, Socket, Data) ->
+%%     case gen_tcp:recv(Socket, 0) of
+%%         {ok, Packet} ->
+%%	    %?DEBUG("Packet Received~n~p~n", [Packet]),
+%%	    NewData = process_packet(FSM_Pid, Data++Packet), %% 处理: '上次解析剩下的数据' + '这次接收到的数据'
+%%	    loop(FSM_Pid, Socket, NewData); %% 注意: NewData是这次解析剩下的数据, 在收到下个数据包后'组合'使用.
+%%	{error, closed} ->
+%%	    ?DEBUG("closed~n", []),
+%%	    ok;
+%%	{error, Reason} ->
+%%	    ?ERROR_MSG("Error receiving on socket ~p: ~p~n", [Socket, Reason]),
+%%	    {error, Reason}
+%%    end.
+%%
+%% parse TCP packet to find lines, and send 'them' to the FSM
+%% 把解析出来的'一行'或者'多行'数据发送给FSM, 返回剩下的数据.
+%% process_packet(FSM_Pid, Data) ->
+%%     case read_line(Data) of
+%%         {line, Line, NewData} ->
+%%	    ?DEBUG("Line~n~p", [Line]),
+%%	    gen_fsm:send_event(FSM_Pid, {line, Line}), %% 把解析出来'一行数据'Line发送给有限状态机.
+%%	    process_packet(FSM_Pid, NewData);          %% 继续处理'剩下'的数据NewData
+%%	 noline ->
+%%	    Data
+%%    end.
+
+%%
+%% 3. 这个模块就是一个FSM, 有如下几个状态:
+%%    a. process_command
+%%    b. process_data_block
+%%    c. discard_data_block
+%%
+%% 当初始化之后, 进入process_command状态, 等待解析一个'行命令', 当Socket收到的数据经过2中的逻辑解析之后, 发送给FSM的
+%% process_command状态, 开始解析命令. 命令解析出来之后, 根据命令的状况：
+%% 进入到process_data_block或者discard_data_block状态.
+%% 例如:
+%% 当解析出一个set key flags exptime bytes\r\n命令之后, 进入process_data_block状态等待接收数据, 当数据接收完成之后
+%% (接收到的数据长度等于bytes的描述), 则调用存储引擎存储数据, 发送STORED\r\n给客户端. 完成之后进入process_command状态. 
+%%
+%% 当解析出一个add key flags exptime bytes\r\n命令之后, 我们需要先判断key对应的数据在存储引擎中是否存在, 如果存在, 则
+%% 进入discard_data_block状态. 当数据接收完成之后(接收到的数据长度等于bytes的描述), 发送NOT_STORED\r\n给客户端, 再次进入
+%% process_command状态; 令一个逻辑, 如果key对应的数据在存储引擎中不存在, 则进入和上面set命令一样的逻辑, 进入到process_data_block
+%% 状态, 存储数据, 发送STORED\r\n给客户端. 完成之后进入process_command状态.
+%%
+%% 4. 支持的命令:
+%% set, add, replace, get, incr, decr, delete, flush_all, quit
+%% 
+%% set 意思是 “储存此数据”
+%% add 意思是 “储存此数据, 只在服务器*未*保留此键值的数据时”
+%% replace意思是 “储存此数据, 只在服务器*曾*保留此键值的数据时”
+%% get 获取操作
+%% incr/decr 增加/减少操作
+%% delete 删除操作
+%% flush_all 删除所有数据
+%% quit 退出操作
+%%
 
 -behaviour(gen_fsm).
 
@@ -79,6 +165,7 @@ process_packet(FSM_Pid, Data) ->
 % Try to find the first line in the Data.
 % return {line, Line, Rest_of_date} if found or
 % noline
+-spec(read_line(list()) -> {line, list(), list()} | noline).
 read_line(Data) ->
     read_line(Data, "").
 read_line("", _Line) ->
@@ -276,7 +363,10 @@ handle_info(_Info, StateName, StateData) ->
 %% Purpose: Shutdown the fsm
 %% Returns: any
 %%----------------------------------------------------------------------
-terminate(_Reason, _StateName, _StateData) ->
+terminate(Reason, _StateName, #state{socket=Socket}=StateData) ->
+    gen_tcp:close(Socket), %% 主动关闭Socket, 可以简介导致接收socket数据的进程loop/3退出, 
+                           %% 从而使fsm进程和socket进程一并退出:) 
+    ?DEBUG("StateData:~p, FSM stopped due to ~p", [StateData, Reason]),
     ok.
 
 
