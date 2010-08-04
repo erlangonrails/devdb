@@ -143,6 +143,7 @@ print_usage() ->
       "  set_loglevel Level~n"
       "  get_listeners~n"
       "  get_cluster~n"
+      "  benchmark ReqCount ReqInterval(ms)"
       "~n"
       "Example:~n"
       "  dispatchserverctl restart~n"

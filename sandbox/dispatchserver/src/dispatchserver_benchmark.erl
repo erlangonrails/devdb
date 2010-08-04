@@ -14,8 +14,8 @@ start() ->
 		      list_to_integer(ReqInterval)),
             halt(0);
 	Any ->
-	    io:format("benchmark arguments error# ~p!~n", [Any])
-	    
+	    io:format("benchmark arguments error# ~p!~n", [Any]),
+            halt(0)   
     end.
 
 multi_req(ReqCount, ReqInterval) ->
