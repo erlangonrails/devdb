@@ -8,7 +8,7 @@ BEAMS = $(SOURCES:%.erl=../ebin/%.beam)
 APP = $(wildcard *.app)
 CFG = $(wildcard *.cfg)
 TARGET_APP = $(APP:%=../ebin/%)
-TARGET_CFG = $(CFG:%=../ebin/%)
+TARGET_CFG = $(CFG:%=../etc/%)
 
 all: $(BEAMS) $(TARGET_APP) $(TARGET_CFG)
 
@@ -18,7 +18,7 @@ all: $(BEAMS) $(TARGET_APP) $(TARGET_CFG)
 ../ebin/%.app: %.app
 	cp $< ../ebin
 
-../ebin/%.cfg: %.cfg
+../etc/%.cfg: %.cfg
 	cp $< ../etc
 
 clean:
