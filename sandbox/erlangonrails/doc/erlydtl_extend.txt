@@ -1,0 +1,78 @@
+介绍DJango - ErlyDTL的模板继承机制
+
+
+1. 介绍ErlyDTL的基本元素
+变量: {{variable}}
+过滤器: {{name|lower}}
+标签: {% tag %}或者{% tag %} ... {% endtag %}
+注释: {# comment #}
+
+2. 模板继承:
+允许你建立一个基本的"骨架"模板, 包含了所有的最常用的站点的元素, 并定义
+了一些可以被自模板覆盖的块.
+
+我们首先定义一个骨架模板, 里面包含了三个block: title, sidebar, content,
+填充这3个block的任务就交给子模板进行.
+
+$base.html
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <link rel="stylesheet" href="style.css" />
+    <title>{% block title %}My amazing site{% endblock %}</title>
+</head>
+<body>
+    <div id="sidebar">
+        {% block sidebar %}
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/blog/">Blog</a></li>
+        </ul>
+        {% endblock %}
+    </div>
+
+    <div id="content">
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
+
+实现一个子模板来继承父模板, 并重写了title和content两个block,
+没有重写sidebar block仍然保持父模板的样子.
+$child.html
+{% extends "base.html" %}
+
+{% block title %}My amazing blog{% endblock %}
+
+{% block content %}
+{% for key, val in data %}
+    <h2>{{ key }}</h2>
+    <p>{{ val }}</p>
+{% endfor %}
+{% endblock %}
+
+渲染:
+erlydtl:compile("child.html", template_view),
+template_view:render([{data, [{"k1","v1"},{"k2","v2"}]}]).
+
+
+3. Django一般的模板继承设计(Django在继承的时候未限制层次): 三层方式
+<1> 创建一个base.html模板, 用它表现站点的主要外观.
+<2> 为站点的每个版块section创建一个base_SECTIONNAME.html的模板
+    比如base_news.html
+<3> 为每种页面创建一个独立的模板, 这些模板扩展了相应的板块的模板.
+
+4. Django使用技巧:
+<1> 如果你在模板中使用了 {% extends %}, 那么它必须是这个模板中的第一个模板标签,
+    否则它就不能正常工作.
+<2> 在父模板中 {% block %} 标签虽然不是越多越好, 总得来说多比少好. 记住, 子模板不
+    需要定义父模板中所有的区块, 因此先定义一系列区块并填入合理的默认值, 然后定义那些你
+    以后才需要的区块.
+<3> 如果发现在一堆模板文件中重复定义相同的内容, 就意味着需要将这些内容放到父模板的一个 
+    {% block %} 中去.
+<4> 给 {% endblock %} 添加一个可选的名字, 可以让代码具有更好的可读性
+    {% block content %}
+    ...
+    {% endblock content %}
+
+
+

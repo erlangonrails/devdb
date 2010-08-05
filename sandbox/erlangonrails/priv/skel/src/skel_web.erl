@@ -75,7 +75,7 @@ render_template(ViewFile,Data,Env) ->
 extract_options(Options) ->
     {proplists:get_value(status,Options,200),
      proplists:get_value(content_type,Options,"text/html"),
-     proplists:get_value(headers,Options,[])}.
+     proplists:get_value(headers,Options,[])}. %% 通过headers选项可以传递额外的cookie.
 
 set_and_clear_flash(Data, Env) ->
     case erails_var:get_flash(Env) of

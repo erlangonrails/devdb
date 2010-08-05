@@ -47,7 +47,7 @@ f. flush数据:
 处理结果给客户端.
 <1> memcached是基于行的协议, 命令行以\r\n结尾, 如何从数据流(list)中解析出一行数据?
 基于文本行的协议都可以用这种方式来解析出一行数据.
-read_line("abc") -> "abc".
+read_line("abc") -> noline.
 read_line("abc\r\ndddd") -> {line, "abc", "dddd"}.
 
 实现:

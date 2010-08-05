@@ -32,27 +32,40 @@ skelcopy(DestDir, AppName) ->
 
 %% Internal API
 
-%% e.g. 
+%% @doc
+%% 返回固定的路径常量
+%% 
+%% 例如: 
 %% /home/username/erlangonrails/ebin/../priv/skel
+-spec(src() -> string()).
 src() ->
     Dir = filename:dirname(code:which(?MODULE)),
     filename:join(Dir, "../priv/skel").
 
+-spec(mochiweb_src() -> string()).
 mochiweb_src() ->
     Dir = filename:dirname(code:which(?MODULE)),
     filename:join(Dir, "../deps/mochiweb").
 
+-spec(erlydtl_src() -> string()).
 erlydtl_src() ->
     Dir = filename:dirname(code:which(?MODULE)),
     filename:join(Dir, "../deps/erlydtl").
 
+-spec(erlangonrails_src() -> string()).
 erlangonrails_src() ->
     Dir = filename:dirname(code:which(?MODULE)),
     filename:join(Dir, "..").
 
+-spec(skel() -> string()).
 skel() ->
     "skel".
 
+%% 将priv/skel拷贝到DestDir目录下, 并且把DestDir/skel下面所有的skel修改成Name.
+%%
+%% 例如:
+%% skelcopy("priv/skel", "/home/user", "blog", _LDst), 把
+%% priv/skel下面所有的内容都拷贝到/home/user/blog下, 并把其中所有的skel替换成blog.
 skelcopy(Src, DestDir, Name, LDst) ->
     Dest = re:replace(filename:basename(Src), skel(), Name, [global, {return, list}]),
     case file:read_file_info(Src) of
@@ -144,6 +157,8 @@ erailscopy(Src, DestDir) ->
 		    ok;
 		"example" ->
 		    ok;
+	        "support" ->
+                    ok;
                 _ ->
 		    ok = ensuredir(DestDir),
                     ok = file:write_file_info(DestDir, #file_info{mode=Mode}),
@@ -168,8 +183,9 @@ erailscopy(Src, DestDir) ->
 	    ok
     end.
 
-
-
+%% @doc
+%% 创建一个目录
+-spec(ensuredir(string()) -> ok | {error, any()}).
 ensuredir(Dir) ->
     case file:make_dir(Dir) of
         ok ->

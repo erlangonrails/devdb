@@ -1,0 +1,17 @@
+
+ErlyDTL最基本的例子:
+
+$test.erl
+-module(test).
+-export([run/0]).
+
+run() ->
+    erlydtl:compile("tpl.html", welcome_view),
+    welcome_view:render([{name, "liqiang"}, 
+			 {age, 23}]).
+
+$tpl.html
+welcome {{name}}, age is {{age}}
+
+测试结果:
+{ok,["welcome ","liqiang",", age is ","23"]}
