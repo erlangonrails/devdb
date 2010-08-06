@@ -1,0 +1,9 @@
+如何传递自定义的Cookie给客户端?
+
+通过headers Options的方式传递给客户端:
+
+例如:
+handle_request("index",[]) ->
+    Cookie1 = erails_cookie:gen_cookie("key1", "val1"),
+    Cookie2 = erails_cookie:gen_cookie("key2", "val2"),
+    {render,"user/index.html",[{data, "user"}], [{headers, [Cookie1, Cookie2]}]}.

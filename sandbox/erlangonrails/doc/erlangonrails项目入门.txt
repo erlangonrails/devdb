@@ -1,0 +1,29 @@
+创建一个简单的erlangonrails项目
+
+
+1. 创建一个名字为blog的erails项目
+cd erlangonrails
+make
+./script/new_rails blog /home/user/tmp
+
+2. 编译这个项目
+cd /home/user/tmp/blog
+make
+
+3. 运行这个项目blog
+./scripts/blogctl start
+
+访问下面URL查看运行效果:)
+http://localhost:8000
+
+4. 添加一个新的Controller, 使它处理下面的URL.
+http://localhost:8000/user
+
+./scripts/generate controller user   ## 创建一个新的Controller
+make                                 ## 编译
+./scripts/blogctl stop               ## 重启项目(加载新的Controller)
+./scripts/blogctl start
+
+访问下面URL查看运行效果:)
+http://localhost:8000/user
+

@@ -1,0 +1,13 @@
+介绍Erlang On Rails的设计原理
+
+
+1. 对于每一个客户端的HTTP GET/POST请求, 我们都会把其中我们感兴趣
+的部分解析成一个Env:proplists(), 客户端的IP, GET/POST的数据, 请求
+的URL等都在这个Env中, 之后我们可以使用框架提供的APIs来方便的获取这次
+HTTP请求中我们感兴趣的数据.
+
+2. 之后根据这个Env中的请求URL进行路由, 路由到适当的Controller的适当的方法进行处理.
+
+
+3. Controller中函数的返回值, 选择对应的View进行渲染, 并把结果返回给客户端.
+
