@@ -36,6 +36,7 @@ dispatch(Env) ->
 	    {static,  F}
     end.
 
+%% @doc
 %% ControllerName:atom()
 %% ActionName是处理请求的名字
 process_request(Env,ControllerName,ActionName,Args) ->

@@ -5,31 +5,14 @@
 %% 在后续版本中可能考虑用ewgi替代该模块:
 %% http://code.google.com/p/ewgi/
 
-%% 如果我们访问http://127.0.0.1:8000/user/show, 经过setup/1以后,
-%% 可能获得如下类似的Evn:proplists().
 %%
 %% 对Req中的数据进行解析, 返回一个proplists(), 这个proplists()就是这次HTTP请求对应的Env,
 %% 这个返回的Env可以被erails_var模块使用.
 %%
-%% [{"REMOTE_ADDR","127.0.0.1"},
-%%  {"PATH_INFO","/user/show"},
-%%  {"REQUEST_METHOD",'GET'},
-%%  {"SERVER_PORT","8000"},
-%%  {"SERVER_PROTOCOL","HTTP/1.1"},
-%%  {"SERVER_NAME","127.0.0.1"},
-%%  {"SERVER_SOFTWARE","MochiWeb"},
-%%  {"HTTP_USER_AGENT",
-%%   "Mozilla/5.0 (X11; U; Linux i686; zh-CN; rv:1.9.1.3) Gecko/20091020 Ubuntu/9.10 (karmic) Firefox/3.5.3"},
-%%  {"HTTP_KEEP_ALIVE","300"},
-%%  {"HTTP_HOST","127.0.0.1:8000"},
-%%  {"HTTP_CONNECTION","keep-alive"},
-%%  {"HTTP_ACCEPT_LANGUAGE","zh-cn,zh;q=0.5"},
-%%  {"HTTP_ACCEPT_ENCODING","gzip,deflate"},
-%%  {"HTTP_ACCEPT_CHARSET","GB2312,utf-8;q=0.7,*;q=0.7"},
-%%  {"HTTP_ACCEPT","text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"}]
 
-
+%% ================================================
 %% External APIs:
+%% ================================================
 
 %%
 %% @doc
@@ -38,8 +21,10 @@
 setup(Req) ->
     parse_request(Req).
 
-
+%% ================================================
 %% Internal APIs:
+%% ================================================
+
 nhdr(L) when is_atom(L) ->
     nhdr(atom_to_list(L));
 nhdr(L) when is_binary(L) ->
@@ -71,30 +56,6 @@ parse_request(Req) ->
                         end
                 end, Hdrs, ?ERAILS_ENV_DATA).
 
-parse_element(server_sw, _Req) ->
-    "MochiWeb";
-parse_element(server_name, Req) ->
-    HostPort = Req:get_header_value(host),
-    case HostPort of
-        HostPort when is_list(HostPort) ->
-            hd(string:tokens(HostPort, ":"));
-        HostPort -> HostPort
-    end;
-parse_element(server_port, Req) ->
-    HostPort = Req:get_header_value(host),
-    case HostPort of
-        HostPort when is_list(HostPort) ->
-	    TokensHostPort = string:tokens(HostPort, ":"),
-            case length(TokensHostPort) of
-                2 -> lists:nth(2, TokensHostPort);
-                _ -> undefined
-            end;
-        _ ->
-            undefined
-    end;
-parse_element(server_protocol, Req) ->
-    {Maj, Min} = Req:get(version),
-    lists:flatten(io_lib:format("HTTP/~b.~b", [Maj, Min]));
 parse_element(method, Req) ->
     Req:get(method);
 parse_element(path_info,Req) ->

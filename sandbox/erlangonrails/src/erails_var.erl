@@ -1,10 +1,6 @@
 -module(erails_var).
 -export([path/1,
 	 path_components/1,
-	 server_software/1,
-	 server_name/1,
-	 server_protocol/1,
-	 server_port/1,
 	 method/1,
 	 content_type/1,
 	 content_length/1,
@@ -25,6 +21,10 @@
 	 flash/2,
 	 get_flash/1]).
 
+-define(AUTO_SESSION_ID, "auto_erails_sid").
+-define(AUTO_ACTION_NAME, "action_name").
+-define(ERAILS_FLASH, "erails_flash").
+
 %%
 %% @doc Return the Path
 %% 对应Req:get(path)
@@ -42,38 +42,12 @@ path(Env) ->
 
 %%
 %% @doc Return the Path as an array parsed on the "/"
-%%
+%% 我们可以根据这个组件进行请求的路由 :)
 -spec(path_components([{any(), any()}]) -> [] | [string()]).
 path_components(Env) ->
     string:tokens(path(Env),"/").
 
-%%
-%% @doc Return the name of the server
-%%
--spec(server_software([{any(), any()}]) -> string()).
-server_software(Env) ->
-    proplists:get_value("SERVER_SOFTWARE", Env).
 
-%%
-%% @doc Return the hostname of the server
-%%
--spec(server_name([{any(), any()}]) -> string()).
-server_name(Env) ->
-    proplists:get_value("SERVER_NAME", Env).
-
-%%
-%% @doc Return the protocol
-%%
--spec(server_protocol([{any(), any()}]) -> string()).
-server_protocol(Env) ->
-    proplists:get_value("SERVER_PROTOCOL", Env).
-
-%%
-%% @doc Return the Server port
-%%
--spec(server_port([{any(), any()}]) -> string() | undefined).
-server_port(Env) ->
-    proplists:get_value("SERVER_PORT", Env).
 
 %%
 %% @doc Return the request method: 'GET','PUT','POST','DELETE'
@@ -117,7 +91,7 @@ get_all_headers(Env) ->
 %%
 -spec(get_param(string(), [{any(), any()}]) -> string() | undefined).
 get_param(Key,Env) ->
-    Params = proplists:get_value("erails.data",Env),
+    Params = proplists:get_value("ERAILS_DATA",Env),
     proplists:get_value(Key,Params).
 
 %% @doc Return a request Value for a given Key. This contains infromations
@@ -137,13 +111,13 @@ get_cookie(Key, Env) ->
 %% 
 -spec(flash({any(), any()}, [{any(), any()}]) -> [{any(), any()}]).
 flash(Term,Env) ->
-    Flash = case get_session_data(erails_flash,Env) of
+    Flash = case get_session_data(?ERAILS_FLASH,Env) of
 		undefined ->
 		    [Term];
 		ExistingFlash ->
 		    [Term|ExistingFlash]
 	    end,
-    set_session_data(erails_flash,Flash,Env).
+    set_session_data(?ERAILS_FLASH,Flash,Env).
 
 
 %% Get and clear the flash
@@ -151,12 +125,12 @@ flash(Term,Env) ->
 -spec(get_flash([{any(), any()}]) -> none | [{any(), any()}]).
 get_flash(Env) ->
     Sid = get_session_id(Env),
-    case get_session_data(erails_flash, Env) of
+    case get_session_data(?ERAILS_FLASH, Env) of
 	undefined ->
 	    %% No flash data
 	    none;
 	Data ->
-	    erails_session_server:remove_session_data(Sid, erails_flash),
+	    erails_session_server:remove_session_data(Sid, ?ERAILS_FLASH),
 	    Data
     end.
 
@@ -165,7 +139,7 @@ get_flash(Env) ->
 %% @doc Get the current session id
 %%
 get_session_id(Env) ->
-    proplists:get_value("erails_sid",Env).
+    proplists:get_value(?AUTO_SESSION_ID,Env).
 
 %% 
 %% Sets the session id. This is done internally
@@ -173,11 +147,11 @@ get_session_id(Env) ->
 %% @hidden
 %%  
 set_session_id(Value,Env) ->
-    case lists:keysearch("erails_sid",1,Env) of
+    case lists:keysearch(?AUTO_SESSION_ID,1,Env) of
 	{value,_} ->
-	    set_value("erails_sid",Value,Env);
+	    set_value(?AUTO_SESSION_ID,Value,Env);
 	false ->
-	    [proplists:property({"erails_sid", Value})|Env]
+	    [proplists:property({?AUTO_SESSION_ID, Value})|Env]
     end.
 
 %% 
@@ -213,7 +187,7 @@ remove_session_data(Key,Env) ->
 %% @doc Return the current requested action
 %%
 get_action(Env) ->
-    proplists:get_value("action_name",Env).
+    proplists:get_value(?AUTO_ACTION_NAME,Env).
 
 %%
 %% @doc Warning! Should not be set manually. This is 
@@ -221,11 +195,11 @@ get_action(Env) ->
 %% @hidden
 %%
 set_action(Env,Value) ->
-    case lists:keysearch("action_name",1,Env) of
+    case lists:keysearch(?AUTO_ACTION_NAME,1,Env) of
 	{value,_} ->
-	    set_value("action_name",Value,Env);
+	    set_value(?AUTO_ACTION_NAME,Value,Env);
 	false ->
-	    [proplists:property({"action_name", Value})|Env]
+	    [proplists:property({?AUTO_ACTION_NAME, Value})|Env]
     end.
 
 %% Internal APIs:

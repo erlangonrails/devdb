@@ -21,3 +21,4 @@ $(EBIN_DIR)/%.$(EMULATOR): %.erl
 
 clean:
 	rm -rfv $(ERL_OBJECTS)
+	rm -rfv *~

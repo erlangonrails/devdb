@@ -1,5 +1,6 @@
 -module(erails_controller_server).
 -behaviour(gen_server).
+-include("erl_logger.hrl").
 
 %%
 %% Erlang On Rails的Name-controller映射模块
@@ -35,7 +36,7 @@ get_controller(Controller) ->
     gen_server:call(?MODULE, {get_controller, Controller}).
 
 %%
-%% 辅助函数: 打印所有的name-controller映射.
+%% 辅助函数: Logger所有的name-controller映射.
 %%
 list_controller() ->
     gen_server:call(?MODULE, view).
@@ -58,7 +59,7 @@ handle_call({get_controller, Controller},_From, State) ->
 
 %% @hidden
 handle_call(view,_From,State) ->
-    error_logger:info_msg("Controller Map:~n~p~n",[State]),
+    ?INFO_MSG("Controller Map:~n~p",[State]),
     {reply,ok,State}.
 
 %% @hidden

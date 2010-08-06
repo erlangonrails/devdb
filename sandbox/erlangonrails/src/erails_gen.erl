@@ -1,6 +1,7 @@
 -module(erails_gen).
 -export([new_controller/3]).
 -include_lib("kernel/include/file.hrl").
+-include("erl_logger.hrl").
 
 %% External APIs:
 new_controller(BaseDir, Controller, AppName) ->
@@ -18,10 +19,10 @@ gen_controller(BaseDir, Controller, AppName) ->
                            [{return, list}, global]),
             ok = file:write_file(ControllerRes, list_to_binary(S)),
             ok = file:write_file_info(ControllerRes, #file_info{mode=Mode}),
-	    io:format("gen controller ~p success!~n", [Controller]),
+	    ?PRINT("gen controller ~p success!~n", [Controller]),
             ok;
 	_ ->
-	    io:format("gen controller ~p error!~n", [Controller]),
+	    ?PRINT("gen controller ~p error!~n", [Controller]),
 	    error
     end.
 
@@ -34,10 +35,10 @@ gen_view(BaseDir, View, AppName) ->
 	    {ok, B} = file:read_file(ViewTpl),
             ok = file:write_file(ViewRes, B),
             ok = file:write_file_info(ViewRes, #file_info{mode=Mode}),
-	    io:format("gen view ~p success!~n", [View]),
+	    ?PRINT("gen view ~p success!~n", [View]),
             ok;
 	_ ->
-	    io:format("gen view ~p error!~n", [View]),
+	    ?PRINT("gen view ~p error!~n", [View]),
 	    error
     end.
 

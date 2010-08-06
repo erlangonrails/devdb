@@ -2,10 +2,11 @@ all:
 	(cd src;$(MAKE))
 	(cd src/controllers;$(MAKE))
 	(cd src/helpers;$(MAKE))
+	(cd src/models;$(MAKE))
 	(cd deps/erlydtl/src;$(MAKE))
 	(cd deps/mochiweb/src;$(MAKE))
 	(cd deps/erlangonrails/src;$(MAKE))
-	(mv deps/erlangonrails/ebin/*.beam ./ebin)
+	(cp deps/erlangonrails/ebin/*.beam ./ebin)
 
 clean:
 	(cd src;$(MAKE) clean)
@@ -14,9 +15,12 @@ clean:
 	(cd deps/erlydtl/src;$(MAKE) clean)
 	(cd deps/mochiweb/src;$(MAKE) clean)
 	(cd deps/erlangonrails/src;$(MAKE) clean)
+	rm -rfv ./ebin/*
 	rm -rfv ./doc/*~
-	rm -rfv ./include/*~
 	rm -rfv ./scripts/*~
 	rm -rfv ./src/*~
 	rm -rfv ./support/*~
+	rm -rfv ./database/*
+	rm -rfv ./log/*
+	rm -rfv ./etc/*
 	rm -rfv *~

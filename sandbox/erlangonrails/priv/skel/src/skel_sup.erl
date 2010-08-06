@@ -41,10 +41,11 @@ upgrade() ->
 %% @spec init([]) -> SupervisorTree
 %% @doc supervisor callback.
 init([]) ->
-    Ip = case os:getenv("MOCHIWEB_IP") of false -> "0.0.0.0"; Any -> Any end,
+    Ip = skel:get_config(ip, "127.0.0.1"),
+    Port = skel:get_config(port, 8000),
     WebConfig = [
          {ip, Ip},
-         {port, 8000},
+         {port, Port},
          {docroot, skel_deps:local_path(["priv", "www"])}],
 
     Web = {skel_web,
@@ -53,7 +54,8 @@ init([]) ->
 
     %% get the base dir
     BaseDir = skel_deps:get_base_dir(),
-    %% add your applications here:
+
+    %% 在这里添加我们需要启动的application:
     Router = {erails_controller_server,
 	      {erails_controller_server, start, [BaseDir]},
 	      permanent, 5000, worker, dynamic},

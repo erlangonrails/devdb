@@ -1,5 +1,6 @@
 -module(erails_skel).
 -export([skelcopy/2]).
+-include("erl_logger.hrl").
 -include_lib("kernel/include/file.hrl").
 
 
@@ -23,9 +24,9 @@ skelcopy(DestDir, AppName) ->
     skelcopy(src(), DestDir, Name, LDst),
 
     %% copy deps/*
-    io:format("~s~n", [lists:nthtail(LDst, DepsDestDir ++ "/mochiweb/*")]),
-    io:format("~s~n", [lists:nthtail(LDst, DepsDestDir ++ "/erlydtl/*")]),
-    io:format("~s~n", [lists:nthtail(LDst, DepsDestDir ++ "/erlangonrails/*")]),
+    ?PRINT("~s~n", [lists:nthtail(LDst, DepsDestDir ++ "/mochiweb/*")]),
+    ?PRINT("~s~n", [lists:nthtail(LDst, DepsDestDir ++ "/erlydtl/*")]),
+    ?PRINT("~s~n", [lists:nthtail(LDst, DepsDestDir ++ "/erlangonrails/*")]),
     depscopy(mochiweb_src(), DepsDestDir ++ "/mochiweb"),
     depscopy(erlydtl_src(), DepsDestDir ++ "/erlydtl"),
     erailscopy(erlangonrails_src(), DepsDestDir ++ "/erlangonrails").
@@ -80,7 +81,7 @@ skelcopy(Src, DestDir, Name, LDst) ->
                     ok;
                 _ ->
                     {ok, Files} = file:list_dir(Src),
-                    io:format("~s/~n", [EDst]),
+                    ?PRINT("~s/~n", [EDst]),
 		    %% skip the hide files: .*
                     lists:foreach(fun ("." ++ _) -> ok;
                                       (F) ->
@@ -99,13 +100,13 @@ skelcopy(Src, DestDir, Name, LDst) ->
                            [{return, list}, global]),
             ok = file:write_file(OutFile, list_to_binary(S)),
             ok = file:write_file_info(OutFile, #file_info{mode=Mode}),
-            io:format("    ~s~n", [filename:basename(Src)]),
+            ?PRINT("    ~s~n", [filename:basename(Src)]),
             ok;
         {ok, _} ->
-            io:format("ignored source file: ~p~n", [Src]),
+            ?PRINT("ignored source file: ~p~n", [Src]),
             ok;
 	{error, _} ->
-	    io:format("skelcopy error: ~p~n", [Src]),
+	    ?PRINT("skelcopy error: ~p~n", [Src]),
 	    ok
     end.
 
@@ -135,7 +136,7 @@ depscopy(Src, DestDir) ->
         {ok, _} ->
             ok;
 	{error, _} ->
-	    io:format("depscopy error: ~p~n", [Src]),
+	    ?PRINT("depscopy error: ~p~n", [Src]),
 	    ok
     end.
 
@@ -179,7 +180,7 @@ erailscopy(Src, DestDir) ->
         {ok, _} ->
             ok;
 	{error, _} ->
-	    io:format("erailscopy error: ~p~n", [Src]),
+	    ?PRINT("erailscopy error: ~p~n", [Src]),
 	    ok
     end.
 

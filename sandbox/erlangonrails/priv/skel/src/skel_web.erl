@@ -8,6 +8,7 @@
 
 -export([start/1, stop/0, loop/2]).
 -include("erlangonrails.hrl").
+-include("erl_logger.hrl").
 
 %% External API
 
@@ -25,12 +26,14 @@ loop(Req, _DocRoot) ->
     %% Setup env...
     InitialEnv = erails_env:setup(Req),
     Env = erails_session:setup(InitialEnv),
+    ?DEBUG("##Env##:~n~p", [Env]),
     
 
-    %% Possible return values
+    %% 目前支持的返回值:
     %% {render, View, Data}
     %% {render, View, Data, Options}
     %% {text, Data}
+    %% {html, Data}
     %% {redirect, Url}
     %% {static, File}
     %% {error, _} 
@@ -53,6 +56,10 @@ loop(Req, _DocRoot) ->
 	    Req:respond({200,
 			 [{"Content-Type","text/plain"}|[erails_cookie:gen_cookie_of_session(Env)]],
 			 Content});
+        {html,Content} ->
+	    Req:respond({200,
+			 [{"Content-Type","text/html"}|[erails_cookie:gen_cookie_of_session(Env)]],
+			 Content});
 	{redirect,Url} ->
 	    Req:respond({302, 
                          [{"Location", Url}, 
@@ -71,12 +78,17 @@ render_template(ViewFile,Data,Env) ->
     FullPathToFile = filename:join([skel_deps:get_base_dir(), "src/views", ViewFile]),
     erails_render:run(FullPathToFile, ViewFile, Data1).
 
+%% @doc
+%% 目前支持status, content_type, headers三个Options.
 %% {Status, ContentType, Headers}
 extract_options(Options) ->
     {proplists:get_value(status,Options,200),
      proplists:get_value(content_type,Options,"text/html"),
      proplists:get_value(headers,Options,[])}. %% 通过headers选项可以传递额外的cookie.
 
+%% @doc
+%% 把Env中的flash数据作为{falsh, Falsh}参数传递给View.
+-spec(set_and_clear_flash([{any(), any()}], any()) -> [{any(), any()}] | []).
 set_and_clear_flash(Data, Env) ->
     case erails_var:get_flash(Env) of
 	none -> Data;

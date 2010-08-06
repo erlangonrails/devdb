@@ -19,9 +19,7 @@ main(_) ->
 
 ensure() ->
     code:add_patha(filename:join(filename:dirname(escript:script_name()),
-                                 "../ebin")),
-    code:add_patha(filename:join(filename:dirname(escript:script_name()),
-                                 "../deps/erlangonrails/ebin")).
+                                 "../ebin")).
 
 usage() ->
     io:format("usage: ~s [controller|model] [Name]~n",

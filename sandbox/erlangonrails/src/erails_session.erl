@@ -2,9 +2,13 @@
 -include("erlangonrails.hrl").
 -export([setup/1]).
 
+%% @doc
+%% 根据Cookie中的Sid来更新这次请求的Env.
+%%
+%% 逻辑:
 %% <1> 如果Cookie中包含sid, 则首先判断这个sid是否在session server中存在, 如果是, 则继续使用;
 %%     否则创建一个新的sid.
-%% <2> 更新Env, 增加{erails_sid, Sid}
+%% <2> 更新Env, 增加{auto_erails_sid, Sid}.
 setup(Env) ->
     %% erails_var:get_cookie/2 返回sid或者undefined
     SessionKey = erails_session_server:new_session(erails_var:get_cookie(?ERAILS_SID, Env)),

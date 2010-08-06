@@ -1,4 +1,5 @@
 -module(erails_render).
+-include("erl_logger.hrl").
 -export([run/3]).
 
 %%
@@ -20,10 +21,10 @@ run(FullPathToFile, ViewFile, Data) ->
 		{ok, Result} ->
 		    Result;
 		{error, Error} ->
-		    error_logger:error_msg("~p:render error ~p~n", [ModName, Error]),
+		    ?ERROR_MSG("~p:render error ~p~n", [ModName, Error]),
 		    io_lib:format("~p:render error ~p~n", [ModName, Error])
             end;
 	{error, Reason} ->
-	    error_logger:error_msg("erlydtl:compile/2 error ~p~n", [Reason]),
+	    ?ERROR_MSG("erlydtl:compile/2 error ~p~n", [Reason]),
 	    io_lib:format("erlydtl:compile/2 error ~p~n", [Reason])
     end.
