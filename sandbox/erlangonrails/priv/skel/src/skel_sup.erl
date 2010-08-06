@@ -5,7 +5,7 @@
 
 -module(skel_sup).
 -author('author <author@example.com>').
-
+-include("erl_logger.hrl").
 -behaviour(supervisor).
 
 %% External exports
@@ -43,10 +43,12 @@ upgrade() ->
 init([]) ->
     Ip = skel:get_config(ip, "127.0.0.1"),
     Port = skel:get_config(port, 8000),
+    DocRoot = skel_deps:local_path(["priv", "www"]),
     WebConfig = [
          {ip, Ip},
          {port, Port},
-         {docroot, skel_deps:local_path(["priv", "www"])}],
+         {docroot, DocRoot}],
+    ?INFO_MSG("start server on#~p", [WebConfig]),
 
     Web = {skel_web,
            {skel_web, start, [WebConfig]},

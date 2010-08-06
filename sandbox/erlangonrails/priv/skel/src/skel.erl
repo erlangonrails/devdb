@@ -22,7 +22,7 @@ ensure_started(App) ->
 start() ->
     application:start(sasl),
     setup_log(), %% manual setup logger
-    %% application:start(mnesia),
+    start_mnesia(),
     skel_deps:ensure(),
     ensure_started(crypto),
     application:start(skel).
@@ -32,7 +32,7 @@ start() ->
 stop() ->
     Res = application:stop(skel),
     application:stop(crypto),
-    %% application:stop(mnesia),
+    stop_mnesia(),
     application:stop(sasl),
     Res.
 
@@ -54,6 +54,22 @@ get_config(Key, Default) ->
 %%====================================================================
 %% Internal functions
 %%====================================================================
+start_mnesia() ->
+    case get_config(mnesia, false) of
+	true ->
+	    application:start(mnesia);
+        false ->
+	    ok
+    end.
+
+stop_mnesia() ->
+    case get_config(mnesia, false) of
+	true ->
+	    application:stop(mnesia);
+	false ->
+	    ok
+    end.
+
 setup_log() ->
     ?SETUP_LOG(skel_ctl:get_log_file()),
     ?SET_LOG_LEVEL(get_config(loglevel, 5)).
