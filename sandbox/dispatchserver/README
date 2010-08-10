@@ -5,6 +5,10 @@ ebin
 etc
 log
 
+补充:
+增加了一个安装脚本, 使用方式:
+sudo ./install.sh /usr/local/dispatchserver
+
 2. 如何启动, 停止dispatchserver? 如何查看dispatchserver的运行状态?
 dispatchserverctl start
 dispatchserverctl stop
