@@ -19,7 +19,7 @@
 %% 解析Req, 返回一个proplists().
 -spec(setup(any()) -> [{any(), any()}]).
 setup(Req) ->
-    parse_request(Req).
+    [{"req_ori", Req} | parse_request(Req)].
 
 %% ================================================
 %% Internal APIs:

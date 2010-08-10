@@ -1,5 +1,6 @@
 -module(erails_var).
--export([path/1,
+-export([req/1,
+         path/1,
 	 path_components/1,
 	 method/1,
 	 content_type/1,
@@ -24,6 +25,10 @@
 -define(AUTO_SESSION_ID, "auto_erails_sid").
 -define(AUTO_ACTION_NAME, "action_name").
 -define(ERAILS_FLASH, "erails_flash").
+
+%% @doc 返回mochiweb内置的Req结构.
+req(Env) ->
+    proplists:get_value("req_ori", Env).
 
 %%
 %% @doc Return the Path
