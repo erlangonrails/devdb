@@ -1,0 +1,27 @@
+#!/usr/bin/env escript
+%% -*- mode: erlang -*-
+-export([main/1]).
+
+%% External API
+
+%% Controller:string()
+main(["controller", Controller]) ->
+    ensure(),
+    BaseDir = sysmon_deps:get_base_dir(),
+    erails_gen:new_controller(BaseDir, Controller, "sysmon");
+main(["model", _Model]) ->
+    ensure(),
+    io:format("did not implement the command!~n", []);
+main(_) ->
+    usage().
+
+%% Internal API
+
+ensure() ->
+    code:add_patha(filename:join(filename:dirname(escript:script_name()),
+                                 "../ebin")).
+
+usage() ->
+    io:format("usage: ~s [controller|model] [Name]~n",
+              [filename:basename(escript:script_name())]),
+    halt(1).

@@ -1,0 +1,198 @@
+-module(erails_skel).
+-export([skelcopy/2]).
+-include("erl_logger.hrl").
+-include_lib("kernel/include/file.hrl").
+
+
+%% External API
+%% Usage:
+%% skelcopy("/var/erails", "blog")
+
+skelcopy(DestDir, AppName) ->
+    ok = ensuredir(DestDir),
+    Name = string:to_lower(AppName),
+    DepsDestDir = DestDir ++ "/" ++ Name ++ "/deps",
+    
+    LDst = case length(filename:dirname(DestDir)) of
+               1 -> %% handle case when dirname returns "/"
+                   0;
+               N ->
+                   N + 1
+           end,
+
+    %% copy priv/skel
+    skelcopy(src(), DestDir, Name, LDst),
+
+    %% copy deps/*
+    ?PRINT("~s~n", [lists:nthtail(LDst, DepsDestDir ++ "/mochiweb/*")]),
+    ?PRINT("~s~n", [lists:nthtail(LDst, DepsDestDir ++ "/erlydtl/*")]),
+    ?PRINT("~s~n", [lists:nthtail(LDst, DepsDestDir ++ "/erlangonrails/*")]),
+    depscopy(mochiweb_src(), DepsDestDir ++ "/mochiweb"),
+    depscopy(erlydtl_src(), DepsDestDir ++ "/erlydtl"),
+    erailscopy(erlangonrails_src(), DepsDestDir ++ "/erlangonrails").
+
+%% Internal API
+
+%% @doc
+%% 返回固定的路径常量
+%% 
+%% 例如: 
+%% /home/username/erlangonrails/ebin/../priv/skel
+-spec(src() -> string()).
+src() ->
+    Dir = filename:dirname(code:which(?MODULE)),
+    filename:join(Dir, "../priv/skel").
+
+-spec(mochiweb_src() -> string()).
+mochiweb_src() ->
+    Dir = filename:dirname(code:which(?MODULE)),
+    filename:join(Dir, "../deps/mochiweb").
+
+-spec(erlydtl_src() -> string()).
+erlydtl_src() ->
+    Dir = filename:dirname(code:which(?MODULE)),
+    filename:join(Dir, "../deps/erlydtl").
+
+-spec(erlangonrails_src() -> string()).
+erlangonrails_src() ->
+    Dir = filename:dirname(code:which(?MODULE)),
+    filename:join(Dir, "..").
+
+-spec(skel() -> string()).
+skel() ->
+    "skel".
+
+%% 将priv/skel拷贝到DestDir目录下, 并且把DestDir/skel下面所有的skel修改成Name.
+%%
+%% 例如:
+%% skelcopy("priv/skel", "/home/user", "blog", _LDst), 把
+%% priv/skel下面所有的内容都拷贝到/home/user/blog下, 并把其中所有的skel替换成blog.
+skelcopy(Src, DestDir, Name, LDst) ->
+    Dest = re:replace(filename:basename(Src), skel(), Name, [global, {return, list}]),
+    case file:read_file_info(Src) of
+        {ok, #file_info{type=directory, mode=Mode}} ->
+            Dir = DestDir ++ "/" ++ Dest,
+            EDst = lists:nthtail(LDst, Dir),
+            ok = ensuredir(Dir),
+            ok = file:write_file_info(Dir, #file_info{mode=Mode}),
+            case filename:basename(Src) of
+		%% skip the ebin directory
+                "ebin" ->
+                    ok;
+                _ ->
+                    {ok, Files} = file:list_dir(Src),
+                    ?PRINT("~s/~n", [EDst]),
+		    %% skip the hide files: .*
+                    lists:foreach(fun ("." ++ _) -> ok;
+                                      (F) ->
+                                          skelcopy(filename:join(Src, F),
+                                                   Dir,
+                                                   Name,
+                                                   LDst)
+                                  end,
+                                  Files),
+                        ok
+            end;
+        {ok, #file_info{type=regular, mode=Mode}} ->
+            OutFile = filename:join(DestDir, Dest),
+            {ok, B} = file:read_file(Src),
+            S = re:replace(binary_to_list(B), skel(), Name,
+                           [{return, list}, global]),
+            ok = file:write_file(OutFile, list_to_binary(S)),
+            ok = file:write_file_info(OutFile, #file_info{mode=Mode}),
+            ?PRINT("    ~s~n", [filename:basename(Src)]),
+            ok;
+        {ok, _} ->
+            ?PRINT("ignored source file: ~p~n", [Src]),
+            ok;
+	{error, _} ->
+	    ?PRINT("skelcopy error: ~p~n", [Src]),
+	    ok
+    end.
+
+depscopy(Src, DestDir) ->
+    case file:read_file_info(Src) of
+        {ok, #file_info{type=directory, mode=Mode}} ->
+            ok = ensuredir(DestDir),
+            ok = file:write_file_info(DestDir, #file_info{mode=Mode}),
+            case filename:basename(Src) of
+                "ebin" ->
+                    ok;
+                _ ->
+                    {ok, Files} = file:list_dir(Src),
+                    lists:foreach(fun ("." ++ _) -> ok;
+                                      (F) ->
+                                          depscopy(filename:join(Src, F),
+						   filename:join(DestDir, F))
+                                  end,
+                                  Files),
+                        ok
+            end;
+        {ok, #file_info{type=regular, mode=Mode}} ->
+            {ok, B} = file:read_file(Src),
+            ok = file:write_file(DestDir, B),
+            ok = file:write_file_info(DestDir, #file_info{mode=Mode}),
+            ok;
+        {ok, _} ->
+            ok;
+	{error, _} ->
+	    ?PRINT("depscopy error: ~p~n", [Src]),
+	    ok
+    end.
+
+erailscopy(Src, DestDir) ->
+    case file:read_file_info(Src) of
+        {ok, #file_info{type=directory, mode=Mode}} ->
+            case filename:basename(Src) of
+                "ebin" ->
+		    ok = ensuredir(DestDir),
+                    ok = file:write_file_info(DestDir, #file_info{mode=Mode}),
+                    ok;
+		"deps" ->
+		    ok;
+		"doc" ->
+		    ok;
+		"priv" ->
+		    ok;
+		"script" ->
+		    ok;
+		"example" ->
+		    ok;
+	        "support" ->
+                    ok;
+                _ ->
+		    ok = ensuredir(DestDir),
+                    ok = file:write_file_info(DestDir, #file_info{mode=Mode}),
+                    {ok, Files} = file:list_dir(Src),
+                    lists:foreach(fun ("." ++ _) -> ok;
+                                      (F) ->
+                                          erailscopy(filename:join(Src, F),
+						     filename:join(DestDir, F))
+                                  end,
+                                  Files),
+                        ok
+            end;
+        {ok, #file_info{type=regular, mode=Mode}} ->
+            {ok, B} = file:read_file(Src),
+            ok = file:write_file(DestDir, B),
+            ok = file:write_file_info(DestDir, #file_info{mode=Mode}),
+            ok;
+        {ok, _} ->
+            ok;
+	{error, _} ->
+	    ?PRINT("erailscopy error: ~p~n", [Src]),
+	    ok
+    end.
+
+%% @doc
+%% 创建一个目录
+-spec(ensuredir(string()) -> ok | {error, any()}).
+ensuredir(Dir) ->
+    case file:make_dir(Dir) of
+        ok ->
+            ok;
+        {error, eexist} ->
+            ok;
+        E ->
+            E
+    end.
