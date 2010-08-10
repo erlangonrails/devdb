@@ -3,6 +3,11 @@ dispatchserver
 ejabberd-2.1.4
 ejabberdclient
 erl-crontab
+erl-memcached
+erlangonrails
+开发版:
+egearmand-server
+riak_core
 
 
 
