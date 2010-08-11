@@ -81,18 +81,14 @@ handle_request_post(Service, Key) ->
 
 %% @doc
 %% 成功返回{text, ?HTTP_OK}, 失败返回{text, Reason :: string()}
-handle_request_post_in(?SRV_MONITOR_APP, Key, #monitor_app{app = _App, 
-							   host = Host,
-							   type = Type,
-							   time = Time,
+handle_request_post_in(?SRV_MONITOR_APP, _Key, #monitor_app{app = _App, 
+							   host = _Host,
+							   type = _Type,
+							   time = _Time,
 							   value = _Value} = Term) ->
-    LogFile = io_lib:format("~s#~s#~p#~s#~s.data", [?SRV_MONITOR_APP, Key, Type, Host, datetime_to_filename(Time)]),
+    LogFile = monitor_app_task_util:gen_filename(Term),
     sysmon_util:log_data(LogFile, "~p.~n", [Term]),
     {text, ?HTTP_OK};
 handle_request_post_in(_Service, _Key, _Term) ->
     {text, "handle_request_post_in error!!!"}.
-
-
-datetime_to_filename({{Y,M,D},{_,_,_}}) ->
-    integer_to_list(Y) ++ "_" ++ integer_to_list(M) ++ "_" ++ integer_to_list(D).
     

@@ -1,0 +1,56 @@
+html, body {
+  color:#000000;
+  font:90% Arial,Helvetica,sans-serif;
+  height:100%;
+  margin:0;
+  overflow:hidden;
+  padding:0;
+}
+
+#wrap {
+  background:url("../image/bg.png") repeat-y scroll 100% 0 #FFFFFF;
+  height:100%;
+  margin-right:210px;
+  position:relative;
+}
+
+h1 {
+  background:none repeat scroll 0 0 #333333;
+  border-bottom:1px solid #333333;
+  border-right:2px solid #111111;
+  color:#999999;
+  font:125%/32px Arial,Helvetica,sans-serif;
+  height:32px;
+  margin:0;
+  padding:0 0 0 0.5em;
+  position:relative;
+}
+
+h1 strong {
+  color:#FFFFFF;
+  font-weight:normal;
+  padding-right:25px;
+}
+
+#content {
+  bottom:0;
+  left:0;
+  overflow-x:auto;
+  overflow-y:scroll;
+  padding:1em 16px 3em 10px;
+  position:absolute;
+  right:0;
+  top:33px;
+}
+
+#sidebar {
+  background:none repeat scroll 0 0 #FFFFFF;
+  height:100%;
+  position:absolute;
+  right:-210px;
+  top:0;
+  width:210px;
+}
+
+
+
