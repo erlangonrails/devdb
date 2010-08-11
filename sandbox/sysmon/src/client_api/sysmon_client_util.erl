@@ -40,13 +40,13 @@ list_to_float(Num, Default) ->
 %% pgrep -f 'ejabberd' ----- 查找ejabberd的pid.
 %%
 -spec get_pid(Pattern :: string() | atom()) -> integer() | undefined.
-get_pid('redis') ->
+get_pid(?REDIS_APP) ->
     get_pid(?REDIS_PATTERN);
-get_pid('mysql') ->
+get_pid(?MYSQL_APP) ->
     get_pid(?MYSQL_PATTERN);
-get_pid('dispatchserver') ->
+get_pid(?DISPATCHSERVER_APP) ->
     get_pid(?DISPATCHSERVER_PATTERN);
-get_pid('ejabberd') ->
+get_pid(?EJABBERD_APP) ->
     get_pid(?EJABBERD_PATTERN);
 get_pid(Pattern) when is_list(Pattern)->
     Cmd = io_lib:format("pgrep -f '~s'", [Pattern]),
