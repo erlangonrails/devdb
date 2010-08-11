@@ -1,3 +1,4 @@
+1. erl-crontab说明:
 erl-crontab是一个和crontab类似的定时任务系统
 
 定义方式:
@@ -42,3 +43,20 @@ c. {{"*", "*", "*", "*", "*"}, {io, format, ["hello~n", []]}}.
 crontab后台进程一旦启动, 会定期检测crontab.cfg中的任务, 如果我们需要增加新的任务, 不需要重启服务,
 只需要修改crontab.cfg, 添加想要的任务即可, crontab后台进程会自动检测到配置文件的修改, 并重新加载
 服务.
+
+
+2. 如何安装erl-crontab?
+手动拷贝下面目录到erl-crontab安装路径下即可
+bin
+ebin
+etc
+log
+
+补充:
+增加了一个安装脚本, 使用方式:
+sudo ./install.sh /usr/local/erl-crontab
+
+3. 如何启动, 停止erl-crontab? 如何查看erl-crontab的运行状态?
+crontabctl start
+crontabctl stop
+crontabctl status
