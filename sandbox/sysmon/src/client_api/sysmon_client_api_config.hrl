@@ -12,7 +12,7 @@
 %% pgrep -f 'Pattern'
 %%
 -define(REDIS_PATTERN, "redis-server").
--define(MYSQL_PATTERN, "mysqld").
+-define(MYSQL_PATTERN, "/usr/sbin/mysqld").
 -define(DISPATCHSERVER_PATTERN, "dispatchserver").
 -define(EJABBERD_PATTERN, "ejabberd").
 
