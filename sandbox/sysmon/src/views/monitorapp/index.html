@@ -10,7 +10,7 @@
   <body>
     <div id="wrap">
       <h1>
-        <strong>&nbsp;&nbsp;&nbsp;&nbsp;sysmon监控的服务列表</strong>
+        <strong>&nbsp;&nbsp;&nbsp;&nbsp;monitor app日志列表</strong>
       </h1>
       <div id="content">
         <table id="fields" class="listing" cellspacing="0">
@@ -19,22 +19,22 @@
 
           <thead>
             <tr>
-	      <th>服务地址</th>
-	      <th>服务名字</th>
+	      <th>日志</th>
+	      <th>时间</th>
             </tr>
           </thead>
 
           <tbody class="content">
-          {% for servicetag, servicekey, servicevalue in services %}
-            {% ifequal servicetag true %}
+          {% for itemtag, itemkey, itemvalue in items %}
+            {% ifequal itemtag true %}
               <tr>
-              <th><b>{{servicekey}}</b></th>
-              <td><code class="string">{{servicevalue}}</code></td>
+              <th><b>{{itemkey}}</b></th>
+              <td><code class="string">{{itemvalue}}</code></td>
               </tr>
             {% else %}
               <tr class="odd">
-              <th><b>{{servicekey}}</b></th>
-              <td><code class="string">{{servicevalue}}</code></td>
+              <th><b>{{itemkey}}</b></th>
+              <td><code class="string">{{itemvalue}}</code></td>
               </tr>
             {% endifequal %}
           {% endfor %}
@@ -43,7 +43,7 @@
           <tbody class="footer">
             <tr>
 	      <td colspan="2">
-	        <span>显示sysmon监控系统所监控的所有的服务</span>
+	        <span>点击时间栏的列表项, 可以获得详细的监控报告</span>
               </td>
             </tr>
           </tbody>
@@ -54,6 +54,7 @@
           <li>
             <span>链接:</span>
             <ul>
+              <li><a href="/">回到系统主页</li>
               <li><a href="/monitorapp/dispatchserver">监控dispatchserver</li>
               <li><a href="/monitorapp/ejabberd">监控ejabberd</li>
               <li><a href="/monitorapp/redis">监控redis</li>

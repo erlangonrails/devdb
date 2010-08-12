@@ -2,9 +2,9 @@
 -export([build_url_monitor_app/3]).
 
 -define(GOOGLE_CHART_API_PREFIX, "http://chart.apis.google.com/chart").
--define(GOOGLE_CHART_API_CHLS, "chls=3,6,3"). %% 折线样式
--define(GOOGLE_CHART_API_CHCO, "chco=00ff00"). %% 数据颜色
--define(GOOGLE_CHART_API_CHF, "chf=bg,s,000000"). %% 背景颜色
+-define(GOOGLE_CHART_API_CHLS, "chls=1,2,0"). %% 折线样式
+-define(GOOGLE_CHART_API_CHCO, "chco=339933"). %% 数据颜色
+-define(GOOGLE_CHART_API_CHF, "chf=bg,s,FEFFEA"). %% 背景颜色
 -define(GOOGLE_CHART_API_CHT, "cht=lc").
 -define(GOOGLE_CHART_API_CHS, "chs=600x300").
 -define(GOOGLE_CHART_API_CHXT, "chxt=x,y").

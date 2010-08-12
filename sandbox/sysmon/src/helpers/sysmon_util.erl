@@ -27,7 +27,7 @@ consult(Filename) ->
 
 %% @doc
 %% 列出data目录下的所有文件
--spec list_dir() -> {ok, string()} | {error, any()}.
+-spec list_dir() -> {ok, [string()]} | {error, any()}.
 list_dir() ->
     Dir = sysmon:get_config(datadir,?DEFAULT_DATADIR),
     file:list_dir(Dir).

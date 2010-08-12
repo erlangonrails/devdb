@@ -2,7 +2,8 @@
 -export([handle_request/2,before_filter/0]).
 
 handle_request("index",[]) ->
-    {render,"home/index.html",[{data, "home"}]}.
+    {render,"home/index.html",[{data, "home"}, 
+	                       {services, get_service()}]}.
 
 before_filter() ->
     FilterOnly = ["index"],
@@ -17,3 +18,11 @@ before_filter() ->
 	false ->
 	    {text, "no action!!!"}
     end.
+
+
+%% 为每一个service增加一个Tag{Key, Val} -> {Tag, Key, Val}
+get_service() ->
+    {_, Ret} = lists:foldl(fun({SrvKey, SrvTag}, {Tag, AccIn}) ->
+                              {not Tag, [{not Tag, SrvKey, SrvTag}|AccIn]}
+                          end, {true, []}, sysmon:get_config(services, [])),
+    lists:reverse(Ret).

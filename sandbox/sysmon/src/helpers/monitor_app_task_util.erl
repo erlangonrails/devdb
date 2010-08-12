@@ -2,7 +2,60 @@
 -include("../sysmon.hrl").
 
 -define(SRV_MONITOR_APP, "monitor_app").
--export([gen_filename/1, gen_image_url/1, collect_result/1]).
+-export([get_sorted_files_by_app/1, get_files_by_app/1, sort/1, gen_filename/1, gen_image_url/1, collect_result/1, get_max_min_value/1]).
+
+
+get_sorted_files_by_app(App) ->
+    Files = get_files_by_app(App),
+    SortFiles = monitor_app_task_util:sort(Files),
+    Ret = lists:foldl(fun(Item, AccIn) ->
+                          case string:tokens(Item, "#") of
+	                      ["monitor_app", App, Type, Ip, Time] -> 
+                                  NewTime = lists:sublist(Time, length(Time) - 5),
+	                          [ {"monitor_app", App, Type, Ip, NewTime}| AccIn];
+                              _ -> AccIn
+                          end
+                      end, [], SortFiles),
+    lists:reverse(Ret).
+
+%% @doc
+%% 获取data文件夹下面app相关的所有数据文件.
+-spec get_files_by_app(App :: string()) -> [string()].
+get_files_by_app(App) ->
+    {ok, Files} = sysmon_util:list_dir(),
+    FilesFilter = lists:filter(fun(Item) ->
+	                           case string:tokens(Item, "#") of
+	                               ["monitor_app", App, _Type, _Ip, _Others] -> true;
+                                       _ -> false
+                                   end
+                               end, Files),
+    FilesFilter.
+
+%% @doc
+%% Note: .ignore file将导致该方法失败.
+sort(Files) ->
+    Ret = lists:sort(fun(File1, File2) ->
+                         %% E.g. ["monitor_app","dispatchserver","cpu","127.0.0.1", "2010_8_12.data"]
+                         ["monitor_app", _, _, _, Time1] = string:tokens(File1, "#"),
+                         ["monitor_app", _, _, _, Time2] = string:tokens(File2, "#"),
+                         NewTime1 = lists:sublist(Time1, length(Time1) - 5), %% remove ".data"
+                         NewTime2 = lists:sublist(Time2, length(Time2) - 5),
+                         [Y1, M1, D1] = string:tokens(NewTime1, "_"),
+                         [Y2, M2, D2] = string:tokens(NewTime2, "_"),
+                         case list_to_integer(Y1) > list_to_integer(Y2) of
+	                     true -> true;
+	                     false ->
+                                 case list_to_integer(M1) > list_to_integer(M2) of
+	                             true -> true;
+                                     false ->
+                                         case list_to_integer(D1) > list_to_integer(D2) of
+	                                     true -> true;
+	                                     false -> false
+                                         end
+                                 end
+                         end
+                     end, Files),
+    Ret.
 
 %% @doc
 %% 根据#monitor_app{}, 产生它对应的文件名
@@ -108,15 +161,11 @@ get_max_min_value(Filename) ->
     end.
 
 %% Fix the 0 issue.
-cal_delta_y(0) ->
-    10 div 100;
 cal_delta_y(0.0) ->
     10.0 / 100;
-cal_delta_y(0.00) ->
-    10.00 / 100;
 cal_delta_y(Data) when is_integer(Data) ->
-    Delta = Data div 10,
+    Delta = Data div 2,
     (Delta + Data) div 100;
 cal_delta_y(Data) when is_float(Data) ->
-    Delta = Data / 10,
+    Delta = Data / 2,
     (Delta + Data) / 100.

@@ -1,5 +1,5 @@
 -module(sysmon_acl).
--export([check_acl/2, is_login/1, do_login/3]).
+-export([check_acl/2, is_login/1, do_logout/1, do_login/3]).
 
 %% @doc
 %% 检测是否是授权用户
@@ -23,6 +23,11 @@ do_login(Username, Password, Env) ->
 	    erails_var:set_session_data("login_ok", Username, Env),
 	    true
     end.
+
+%% @doc
+%% 清理session中的{login_ok, Username}信息.
+do_logout(Env) ->
+    erails_var:remove_session_data("login_ok", Env).
 
 %% @doc
 %% 判断用户是否登录
