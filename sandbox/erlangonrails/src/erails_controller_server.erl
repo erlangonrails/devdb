@@ -77,14 +77,14 @@ code_change(_OldVsn, State, _Extra) ->
 
 %% Internal APIs:
 list_controllers(BaseDir) ->
-    Path = filename:join([BaseDir, "src/controllers", "*_controller.erl"]),
+    Path = filename:join([BaseDir, "ebin", "*_controller.beam"]),
     %% returns a list of all files that match Unix-style wildcard-string Wildcard.
     filelib:wildcard(Path).
 
 %% @return [{"login", login_controller}, {"logout", logout_controller}]    
 load_controllers(BaseDir) ->
     lists:foldl(fun(File,Acc) ->
-			OrgName = filename:basename(File, ".erl"),
+			OrgName = filename:basename(File, ".beam"),
 			KeyName = string:substr(OrgName, 1, length(OrgName) - length("_controller")), 
 			AtomName = list_to_atom(OrgName),
 			[{KeyName,AtomName}|Acc]
