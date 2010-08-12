@@ -24,3 +24,10 @@ c. 修改erl-crontab的配置文件crontab.cfg, 增加任务:
 d. 启动erl-crontab
 sudo ./bin/crontabctl start
 
+
+2. 如何配置sysmon server?
+a. sudo ./install_server.sh /usr/local/sysmon
+b. 修改配置文件etc/sysmon.cfg
+c. 启动sysmon server
+   sudo ./scripts/sysmonctl start
+

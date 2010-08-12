@@ -47,7 +47,7 @@ get_items(MyApp) ->
 %% {monitor_app,dispatchserver,"127.0.0.1",cpu,{{2010,8,12},{11,5,14}},0.0}.
 get_sourcedata(Filename) ->
     {ok, Items} = sysmon_util:consult(Filename),
-    {_, Ret} = lists:foldl(fun({MonitorAppAtom, AppAtom, Host, TypeAtom, Time, Value}=Record, {Tag, AccIn}) ->
+    {_, Ret} = lists:foldl(fun({MonitorAppAtom, _AppAtom, _Host, _TypeAtom, _Time, _Value}=Record, {Tag, AccIn}) ->
                               ResKey = atom_to_list(MonitorAppAtom),
                               ResVal = io_lib:format("~p", [Record]),
                               {not Tag, [{not Tag, ResKey, ResVal}|AccIn]}
