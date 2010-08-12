@@ -4,6 +4,7 @@
 -include("erl_logger.hrl").
 
 -export([start_link/0]).
+-export([run_task/1]). %% for debug
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
@@ -160,15 +161,17 @@ range_ok1(Val, Cur, Last, Step) ->
 
 
 %% run the task
+%% 修改为在本进程运行:)
 run_task({M, F, A} = Task) ->
-    proc_lib:spawn(
-        fun() ->
+   %% proc_lib:spawn(
+   %%     fun() ->
             case catch apply(M, F, A) of
                 {'EXIT', R} ->
                     ?ERROR_MSG("cron task ~p error: ~p", [Task, R]),
                     ok;
-                _ ->
+                RetVal ->
+                    ?DEBUG("cron task retrun value#~p", [RetVal]),
                     ok
-            end
-        end
-    ).
+            end.
+    %%    end
+   %% ).
