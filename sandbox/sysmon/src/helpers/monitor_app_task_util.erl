@@ -82,14 +82,9 @@ gen_image_url(Filename) ->
 	    Type1 = list_to_atom(Type),
             case Type1 of
 		'cpu' ->
-                    %% Fix the format issue, 有的浮点数4.000000234特别难看, 把小数点后面的都去除掉:)
-                    [YMaxStr] = io_lib:format("~p", [YMax]),
-                    YMax1 = case string:tokens(YMaxStr, ".") of
-	                      [A1, _A2] -> A1;
-                              [A3] -> A3
-                            end,
-		    YMax2 = io_lib:format("~s+(%CPU)", [YMax1]),
-                    sysmon_google_chart_api:build_url_monitor_app(DataList, XList, YMax2);
+                    %% Fix the format issue, 有的浮点数4.000000234特别难看, 浮点数转换为整数:)
+		    YMax1 = io_lib:format("~p+(%CPU)", [erlang:round(YMax)]),
+                    sysmon_google_chart_api:build_url_monitor_app(DataList, XList, YMax1);
 		'memory' ->
                     YMax1 = case YMax > 2048 of
 				true ->
@@ -115,7 +110,7 @@ collect_result(Filename) ->
 				      is_integer(ArgValue) ->
 					  [ArgValue div Delta | AccIn];
 				      is_float(ArgValue) ->
-					  [ArgValue / Delta | AccIn];
+					  [erlang:round(ArgValue / Delta) | AccIn]; %% 浮点数转换为整数, 否则会造成URL过长的错误, 例如66.66666666666666
 				      true ->
 					  AccIn
                                   end
@@ -165,6 +160,7 @@ get_max_min_value(Filename) ->
 	{error, Reason} ->
 	    {error, Reason}
     end.
+
 
 %% Fix the 0 issue.
 cal_delta_y(0.0) ->
