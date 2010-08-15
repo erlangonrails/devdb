@@ -10,7 +10,7 @@ a. insert into rostergroups(username, jid, grp) values
 b. insert into rosterusers(username, jid, nick, subscription, ask, 
        askmessage, server, subscribe, type) 
        values ('liqiangtest5', 'liqiangtest5@91guoguo.com', '', 
-       'N', 'N', '', 'N', '', 'item')
+       'B', 'N', '', 'N', '', 'item')
 
 2. 补充:
 rosterusers表中的subscription和ask两个字段的状态总结:
@@ -31,4 +31,28 @@ rosterusers表中的subscription和ask两个字段的状态总结:
 
 用户自己订阅自己:
 通常两个用户之间建立一个双向的订阅之后, 最终subscription和ask应该为'B', 'N'; 
-当如果'用户自己订阅自己的出席状态'完成之后, 最终subscription和ask应该为'N', 'N'.
+当如果'用户自己订阅自己的出席状态'完成之后, 最终subscription和ask应该为'B', 'N'.
+
+补充:
+用户添加自己看不到添加消息的问题
+a. XMPP协议中presence可用用作两方面功能: 一个是用户自己出席状态的改变(忙碌, 离开等); 另一个就是订阅其它用户的出席消息(添加好友)
+
+XMPP协议文档:
+a. <presence/>出席信息节的'type'属性是可选的(OPTIONAL). 一个不拥有任何'type'属性的出席信息节用来通知服务器发送者已经在线并且可以进行通信了, 'type' 属性表示缺乏可用性, 请求管理对其他实体的出席信息的订阅, 请求其他实体的当前出席信息, 或发生了和上次发出的出席信息节有关的错误. 
+
+b. <presence/> 元素可以被看作一个基本的广播或“出版-订阅”机制,用于多个实体接收某个已订阅的实体的信息(在这里,是网络可用性信息). 通常,一个发行实体应该（SHOULD）不带'to'属性发送一个出席信息,这时这个实体所连接的服务器应该（SHOULD）广播或多播 (multiplex?)那个节给所有订阅的实体.无论如何,一个发行实体也可以(MAY)带'to'属性发送一个出席信息节,这时服务器应该 (SHOULD)路由或递送这个节给预定的接收者
+
+ejabberd内部在这部分实现的代码，实现这部分逻辑的时候, 跟标准XMPP文档略微有点点出入:
+i. 如果To为空, 则认为是用户自己出席状态的改变. 
+ii. 如果To地址为用户自己本身的Jid, 也认为是用户出席状态的改变 
+iii. 其它情况都认为是订阅其它用户的出席消息
+
+所以，我们发送自己添加自己的用户请求给ejabberd, 例如, liqiang添加liqiang为好友
+<presence to="liqiang@91guoguo.com" type="subscribe">
+  <status>附加消息</status>
+</presence>
+这条消息在ejabberd中符合ii规则，会被认为是一条出席消息, 会交给出席消息的处理逻辑来处理, 但是由于type=subscribe又是订阅出席消息的属性,
+所以该消息在ejabberd内部会被直接过滤掉.
+
+
+
