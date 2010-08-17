@@ -238,7 +238,7 @@ Solution: Fixed
 
 ===================================================================
 ID: 5
-State: Active - Fix Avaliable
+State: Active - Closed
 CreateDate: 2010/7/28
 CloseDate: 2010/7/28
 Description: 客户端使用火星文修改用户昵称的时候导致断线.
@@ -358,4 +358,23 @@ M=245.84609821452267, I=9478.545
 
 =INFO REPORT==== 2010-07-28 12:58:42 ===
 D(<0.8983.0>:ejabberd_c2s:1473) : Send XML on stream = "<stream:error><xml-not-well-formed xmlns='urn:ietf:params:xml:ns:xmpp-streams'/></stream:error>"
+
+===================================================================
+ID: 6
+State: Active - 
+CreateDate: 2010/8/17
+CloseDate: 2010/8/17
+Description: 在不同ejabberd上登录的客户端相互看不到彼此的在线状态
+Solution: 
+===================================================================
+
+===================================================================
+详细描述:
+表现为在ejabberd cluster中不同ejabberd上登录的客户端看不到彼此的在线状态, 原因是由于
+ejabberd cluster中用户的在线状态通过mnesia cluster共享, 由于mnesia cluster集群断开连接,
+但此时的ejabberd仍然在运行, 所有导致mnesia cluster中的session表没有被所有的ejabberd节点共享，
+才出现上述问题.
+
+解决方式:
+
 
