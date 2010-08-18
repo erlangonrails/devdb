@@ -1,0 +1,16 @@
+1. 新用户登录后, 会收到哪些异步的消息?
+
+主要是两类:
+a. 离线时候收到的<message>消息
+b. 添加好友的<presence>消息
+
+a. 离线消息存储在spool表, 登录后检查spool表, 把这些离线消息发送给用户
+select username, xml from spool where username='username' order by seq
+
+b. 查询rosterusers表, 把ask = 'I'的消息发送个用户, 这类消息表示用户的未处理请求.
+select username, jid, nick, subscription, ask, askmessage, server, subscribe, type from rosterusers where username='username'
+
+例如:
+用户B在A离线的时候添加A为好友, 则A的rosterusers表中会有subscription='N', ask='I'这样一条记录, 当A登录后, ejabberd就会检测rosterusers表, 然后
+把这条添加请求发送给A.
+如果A登录后没有处理这条请求就退出了, 则rosterusers表中的这条记录仍然不变, 当A再次重新登录的时候, ejabberd仍然会发送这条请求给A, 直到A处理了这条添加请求为止.
