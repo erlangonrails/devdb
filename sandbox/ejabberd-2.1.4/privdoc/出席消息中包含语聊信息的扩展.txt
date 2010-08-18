@@ -1,0 +1,42 @@
+新功能描述:
+当一个用户进入一个频道的时候, 其它用户会收到它的出席消息, 签名中包含它当前所在的频道的信息.
+
+1. 原来的签名发送方式:
+<presence>
+  <status>这里是用户签名(RTF格式)</status>
+</presence>
+
+2. 监控频道扩展的签名发送方式:
+客户端收到<presence>出席消息广播的时候, 把<status/>中的内容拿出来
+i. 把<rtf>xxx</rtf>中的内容解析为rtf格式的签名
+ii. 如果存在<channel_ext>xxx</channel_ext>则解析为频道信息; 如果不存在忽略即可.
+    也就是说<channel_ext/>这部分信息为可选的.
+
+
+例子:
+a. 不包含频道扩展信息
+<presence>
+  <status>
+    <rtf>这里是用户签名(RTF格式)</rtf>
+  </status>
+</presence>
+
+b. 包含频道扩展信息(红色的channel_ext部分为可选的)
+<presence>
+  <status>
+    <rtf>这里是用户签名(RTF格式)</rtf>
+    <channel_ext>
+      <server_name>ServerName</server_name>
+      <server_id>ServerID</server_id>
+      <server_ip>ServerIP</server_ip>
+      <server_port>ServerPort</server_port>
+      <logo>Logo</logo>
+      <count>Count</count>
+      <capacity>Capacity</capacity>
+      <create_username>CreateUsername</create_username>
+      <nick_id>NickId</nick_id>
+      <isp>Isp</isp>
+      <room_type>RoomType</room_type>
+      <total_credit>TotalCredit</total_credit>
+    </channel_ext>
+  </status>
