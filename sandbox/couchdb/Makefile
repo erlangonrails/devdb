@@ -1,5 +1,6 @@
 all:
 	cd src/couchdb; $(MAKE)
+	cd src/mochiweb; $(MAKE)
 
 clean:
 	rm -rfv ebin/*
@@ -8,3 +9,4 @@ clean:
 	rm -rfv doc/pdf/*~
 	rm -rfv *~
 	cd src/couchdb; $(MAKE) clean
+	cd src/mochiweb; $(MAKE) clean
