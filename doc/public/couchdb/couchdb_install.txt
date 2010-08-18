@@ -1,0 +1,52 @@
+介绍如何在Ubuntu上安装CouchDB
+
+我们可以在Ubuntu上直接通过Synaptic GUI或者sudo apt-get install couchdb来直接安装.
+这篇文档描述的是自己编译 & 安装couchdb.
+
+1. 安装编译CouchDB的依赖环境(first set of dependencies)
+sudo apt-get build-dep couchdb
+
+2. 手动安装CouchDB的部分依赖(second set of dependencies)
+sudo apt-get install libmozjs-dev libicu-dev libcurl4-gnutls-dev libtool 
+
+注意: 在Ubuntu 10.04, libmozjs-dev已经被xulrunner-dev所替代
+
+3. 下载最新的CouchDB源代码, 配置并编译:
+cd apache-couchdb-0.11.1
+./configure --prefix=/usr/local/couchdb \
+             --with-js-lib=/usr/lib/xulrunner-devel-1.9.2.8/lib \
+             --with-js-include=/usr/lib/xulrunner-devel-1.9.2.8/include
+make
+sudo make install
+
+注意:
+需要指定--prefix=xxxx的安装路径
+需要执行xulrunner的正确路径
+
+4. 运行CouchDB
+cd /usr/local/couchdb/bin/
+sudo ./couchdb start 
+
+curl http://127.0.0.1:5984
+会看到下面信息:
+{"couchdb":"Welcome","version":"0.11.1"}
+
+或者通过浏览器访问下面地址查看效果:
+http://127.0.0.1:5984/_util
+ 
+
+可能遇到的问题:
+1. 在Ubuntu 10.04中, 在Futon中运行test suite的时候, CouchDB会报下面错误:
+error while loading shared libraries: libmozjs.so: cannot open shared object file: No such file or directory
+[error] [<0.1282.0>] OS Process Error <0.2443.0> :: {os_process_error,{exit_status,127}}
+
+解决方式:
+sudo vi /etc/ld.so.conf.d/xulrunner.conf
+加入下面两行(注意版本)
+/usr/lib/xulrunner-1.9.2.8
+/usr/lib/xulrunner-devel-1.9.2.8
+sudo /sbin/ldconfig
+
+
+
+
