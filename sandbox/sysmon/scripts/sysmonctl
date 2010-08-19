@@ -47,7 +47,7 @@ case "$1" in
   start)
 	 $ERL -noinput -detached $NAME $NODE \
            $ERLANG_OPTS \
-           -pa "$ROOT/ebin" -s sysmon start \
+           -pa "$ROOT/ebin" -pa "$ROOT/deps/exmpp-0.9.3/ebin" -s sysmon start \
            -mnesia dir \""$ROOT/database"\" \
 	   -setcookie $SETCOOKIE \
            -sasl sasl_error_logger \{file,\"$SASL_LOG_PATH\"\} 
@@ -59,11 +59,11 @@ case "$1" in
          read foo 
          $ERL $NAME sysmondebug@$HOST -remsh $NODE \
            -setcookie $SETCOOKIE \
-           -pa "$ROOT/ebin"
+           -pa "$ROOT/ebin" -pa "$ROOT/deps/exmpp-0.9.3/ebin"
          ;;
       *)
          $ERL -noinput $NAME sysmonctl@$HOST \
            -setcookie $SETCOOKIE \
-           -pa "$ROOT/ebin" -s sysmon_ctl -extra $NODE $@
+           -pa "$ROOT/ebin" -pa "$ROOT/deps/exmpp-0.9.3/ebin" -s sysmon_ctl -extra $NODE $@
          ;;
 esac

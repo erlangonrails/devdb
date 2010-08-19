@@ -30,4 +30,3 @@ a. sudo ./install_server.sh /usr/local/sysmon
 b. 修改配置文件etc/sysmon.cfg
 c. 启动sysmon server
    sudo ./scripts/sysmonctl start
-

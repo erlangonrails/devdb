@@ -8,6 +8,8 @@ if [ $# -ne 1 ]; then
 else
   mkdir $1
   mkdir $1/src
+  mkdir $1/deps
+  mkdir $1/deps/exmpp-0.9.3
 
   cp -r $ROOT/scripts $INSTALLPATH
   cp -r $ROOT/database $INSTALLPATH
@@ -18,4 +20,6 @@ else
   cp -r $ROOT/priv $INSTALLPATH
 
   cp -r $ROOT/src/views $INSTALLPATH/src
+  cp -r $ROOT/deps/exmpp-0.9.3/c_src $INSTALLPATH/deps/exmpp-0.9.3
+  cp -r $ROOT/deps/exmpp-0.9.3/ebin $INSTALLPATH/deps/exmpp-0.9.3
 fi
