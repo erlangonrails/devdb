@@ -1,0 +1,132 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>Module exmpp_caps</title>
+<link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
+</head>
+<body bgcolor="white">
+<div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<hr>
+
+<h1>Module exmpp_caps</h1>
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+  The module <strong>exmpp_caps</strong> provides helpers to generate
+  entities capabilities hash based on sha-1.
+
+<p><b>Authors:</b> Karim Gemayel (<a href="mailto:karim.gemayel@pocess-one.net"><tt>karim.gemayel@pocess-one.net</tt></a>).</p>
+<p><b>References</b><ul><li>Depends on
+  <a href="http://www.erlang.org/doc/man/crypto.html">crypto</a>.</li></ul></p>
+
+<h2><a name="description">Description</a></h2>
+  The module <strong>exmpp_caps</strong> provides helpers to generate
+  entities capabilities hash based on sha-1.
+ 
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-caps">caps()</a></h3>
+<p><tt>caps() = {caps, Identities, Features, Forms}</tt>
+<ul class="definitions"><li><tt>Identities = <a href="#type-identity">identity()</a> | [<a href="#type-identity">identity()</a>]</tt></li>
+<li><tt>Features = [<a href="#type-ns">ns()</a>] | []</tt></li>
+<li><tt>Forms = <a href="#type-form">form()</a> | [<a href="#type-form">form()</a>] | []</tt></li>
+</ul></p>
+<p>Record representing a Caps.</p>
+
+<h3 class="typedecl"><a name="type-category">category()</a></h3>
+<p><tt>category() = string()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-field">field()</a></h3>
+<p><tt>field() = {field, Var, Values}</tt>
+<ul class="definitions"><li><tt>Var = <a href="#type-var">var()</a></tt></li>
+<li><tt>Values = [<a href="#type-value">value()</a>]</tt></li>
+</ul></p>
+<p>Record representing a field.</p>
+
+<h3 class="typedecl"><a name="type-form">form()</a></h3>
+<p><tt>form() = {form, Type, Fields}</tt>
+<ul class="definitions"><li><tt>Type = <a href="#type-type">type()</a></tt></li>
+<li><tt>Fields = <a href="#type-field">field()</a> | [<a href="#type-field">field()</a>]</tt></li>
+</ul></p>
+<p>Record representing a form.</p>
+
+<h3 class="typedecl"><a name="type-hash">hash()</a></h3>
+<p><tt>hash() = binary()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-identity">identity()</a></h3>
+<p><tt>identity() = {identity, Category, Type, Lang, Name}</tt>
+<ul class="definitions"><li><tt>Category = <a href="#type-category">category()</a></tt></li>
+<li><tt>Type = <a href="#type-type">type()</a></tt></li>
+<li><tt>Lang = <a href="#type-lang">lang()</a></tt></li>
+<li><tt>Name = <a href="#type-name">name()</a></tt></li>
+</ul></p>
+<p>Record representing an identity.</p>
+
+<h3 class="typedecl"><a name="type-lang">lang()</a></h3>
+<p><tt>lang() = string()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-name">name()</a></h3>
+<p><tt>name() = string()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-ns">ns()</a></h3>
+<p><tt>ns() = string() | binary()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-type">type()</a></h3>
+<p><tt>type() = string()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-value">value()</a></h3>
+<p><tt>value() = string() | binary()</tt></p>
+
+
+<h3 class="typedecl"><a name="type-var">var()</a></h3>
+<p><tt>var() = string()</tt></p>
+
+
+<h2><a name="index">Function Index</a></h2>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#make-1">make/1</a></td><td>Generate a hash from a Caps record.</td></tr>
+<tr><td valign="top"><a href="#make-2">make/2</a></td><td>Generate a hash from an identity record or from a list of records
+       and a list of namespaces .</td></tr>
+<tr><td valign="top"><a href="#make-3">make/3</a></td><td>Generate a hash from an identity record or from a list of identity records,
+       a list of namespaces, and a form or a list of forms .</td></tr>
+</table>
+
+<h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="make-1">make/1</a></h3>
+<div class="spec">
+<p><tt>make(Identity::Caps) -&gt; Hash</tt>
+<ul class="definitions"><li><tt>Caps = <a href="#type-caps">caps()</a> | <a href="#type-identity">identity()</a> | [<a href="#type-identity">identity()</a>]</tt></li>
+<li><tt>Hash = <a href="#type-hash">hash()</a></tt></li>
+</ul></p>
+</div><p>Generate a hash from a Caps record.</p>
+
+<h3 class="function"><a name="make-2">make/2</a></h3>
+<div class="spec">
+<p><tt>make(Identity::Identities, Features) -&gt; Hash</tt>
+<ul class="definitions"><li><tt>Identities = <a href="#type-identity">identity()</a> | [<a href="#type-identity">identity()</a>]</tt></li>
+<li><tt>Features = [<a href="#type-ns">ns()</a>]</tt></li>
+<li><tt>Hash = <a href="#type-hash">hash()</a></tt></li>
+</ul></p>
+</div><p>Generate a hash from an identity record or from a list of records
+       and a list of namespaces .</p>
+
+<h3 class="function"><a name="make-3">make/3</a></h3>
+<div class="spec">
+<p><tt>make(Identities, Features, Form::Forms) -&gt; Hash</tt>
+<ul class="definitions"><li><tt>Identities = <a href="#type-identity">identity()</a> | [<a href="#type-identity">identity()</a>]</tt></li>
+<li><tt>Features = [<a href="#type-ns">ns()</a>]</tt></li>
+<li><tt>Forms = <a href="#type-form">form()</a> | [<a href="#type-forms">forms()</a>]</tt></li>
+<li><tt>Hash = <a href="#type-hash">hash()</a></tt></li>
+</ul></p>
+</div><p>Generate a hash from an identity record or from a list of identity records,
+       a list of namespaces, and a form or a list of forms .</p>
+<hr>
+
+<div class="navbar"><a name="#navbar_bottom"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
+<p><i>Generated by EDoc, Jun 22 2010, 11:00:46.</i></p>
+</body>
+</html>
