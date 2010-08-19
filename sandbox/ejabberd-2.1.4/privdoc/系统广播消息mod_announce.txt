@@ -1,0 +1,54 @@
+1. 功能描述
+我们需要实现一个功能, 对授权的用户赋予<message>消息广播的功能, 这个功能在系统对所有用户发送通知的时候十分有用.
+
+2. 扩展方式:
+<1> 原有的message消息, user1发送一条message给user2.
+<message from='user1@91guoguo.com/call' to='user2@91guoguo.com' xml:lang='*' type='chat' id='id1'>
+  <body>RTF编码的Body</body>
+</message>
+
+<2> 扩展后的系统消息: 
+URI: 
+91guoguo.com/all      -> 发送消息给所有的注册用户
+91guoguo.com/online   -> 发送消息给所有的在线用户
+
+系统管理员发送下面消息:
+<message from='announceadmin@91guoguo.com' to='91guoguo.com/announce/all' xml:lang='*' type='chat' id='id1'>
+  <guoguo_system>这里是UTF8编码的系统消息</guoguo_system>
+</message>
+
+用户会收到:
+<message from='91guoguo.com' to='user1@91guoguo.com/call' xml:lang='*' type='chat' id='id1'>
+  <guoguo_system>这里是UTF8编码的系统消息</guoguo_system>
+</message>
+
+3. 配置:
+<1> 如果用未授权的用户发送announce-message消息, 会返回下面错误:
+<message from='91guoguo.com/announce/online' to='user1@91guoguo.com/call' xml:lang='*' type='chat' id='id1'>
+  <guoguo_system>这里是UTF8编码的系统消息</guoguo_system>
+  <error code="403" type="auth">
+    <forbidden xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>
+  </error>
+</message>
+
+<2> 如何配置授权announce用户?
+{acl, direction, {user, "accounce1", "91guoguo.com"}}.
+{acl, direction, {user, "accounce2", "91guoguo.com"}}.
+{acl, admins, {user, "admin", "91guoguo.com"}}.
+
+{access, announce, [{allow, admins},
+                    {allow, direction}]}.
+
+
+%% 配置文件需要打开mod_adhoc和mod_announce两个模块
+{modules,
+ [
+  ...
+  {mod_adhoc, []},
+  {mod_announce, [{access, announce}]},
+  ...
+ ]}.
+
+
+
+
