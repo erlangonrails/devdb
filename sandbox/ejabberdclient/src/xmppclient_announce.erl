@@ -55,6 +55,7 @@ send_announce_all(MySession, Message, VHost) ->
     Data = io_lib:format(
            "<message to ='~s/announce/all' type='chat' xml:lang='en'>" ++
              "<guoguo_system_title>this is title</guoguo_system_title>" ++
+             "<guoguo_system_link>this is link</guoguo_system_link>" ++
              "<guoguo_system>~s</guoguo_system>" ++
 	   "</message>", [VHost, Message]),
     xmppclient_util:send_string(MySession, Data).
@@ -63,6 +64,7 @@ send_announce_online(MySession, Message, VHost) ->
     Data = io_lib:format(
            "<message to ='~s/announce/online' type='chat' xml:lang='en'>" ++
              "<guoguo_system_title>this is title</guoguo_system_title>" ++
+             "<guoguo_system_link>this is link</guoguo_system_link>" ++
              "<guoguo_system>~s</guoguo_system>" ++ 
 	   "</message>", [VHost, Message]),
     xmppclient_util:send_string(MySession, Data).
