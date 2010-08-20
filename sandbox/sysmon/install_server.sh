@@ -22,4 +22,8 @@ else
   cp -r $ROOT/src/views $INSTALLPATH/src
   cp -r $ROOT/deps/exmpp-0.9.3/c_src $INSTALLPATH/deps/exmpp-0.9.3
   cp -r $ROOT/deps/exmpp-0.9.3/ebin $INSTALLPATH/deps/exmpp-0.9.3
+  rm -rfv $INSTALLPATH/deps/exmpp-0.9.3/c_src/*.c
+  rm -rfv $INSTALLPATH/deps/exmpp-0.9.3/c_src/*.h
+  rm -rfv $INSTALLPATH/deps/exmpp-0.9.3/c_src/Makefile
+  rm -rfv $INSTALLPATH/deps/exmpp-0.9.3/c_src/Makefile.*
 fi

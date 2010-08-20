@@ -8,7 +8,51 @@
   </head>
 
   <body>
-    <h1>Erlang on Rails works! - hello {{data}}</h1>
+        <div id="wrap">
+      <h1>
+        <strong>&nbsp;&nbsp;&nbsp;&nbsp;monitor app日志列表</strong>
+      </h1>
+      <div id="content">
+        <div style="color:red;">{{result}}</div>
+        <div>基于安全考虑, 我们需要提供系统授权的announce用户名 & 密码才能发送系统广播消息</div>
+        <br/>
+        <div>发送消息给在线用户</div>
+        <form action="/announce/service/online" method="post">
+          announce用户名: <input type="text" name="announce_usr" value=""/><br/>
+          announce密码: <input type="text" name="announce_pwd" value=""/><br/>
+          服务器的广播消息: <br/>
+          <textarea name="message" cols="30" rows="4" value=""></textarea>
+          <br/>
+          <input type="submit" name="submit" value="发送"/>
+        </form>
+        <br/>
+        <br/>
+        <div>发送消息给所有注册用户</div>
+        <form action="/announce/service/all" method="post">
+          announce用户名: <input type="text" name="announce_usr" value=""/><br/>
+          announce密码: <input type="text" name="announce_pwd" value=""/><br/>
+          服务器的广播消息: <br/>
+          <textarea name="message" cols="30" rows="4" value=""></textarea>
+          <br/>
+          <input type="submit" name="submit" value="发送"/>
+        </form>
+      </div>
+      <div id="sidebar" class="" style="width: 210px; display: block; height: 100%; right: -210px;">
+        <ul id="nav" style="display: block;">
+          <li>
+            <span>链接:</span>
+            <ul>
+              <li><a href="/">回到系统主页</li>
+              <li><a href="/monitorapp/dispatchserver">监控dispatchserver</li>
+              <li><a href="/monitorapp/ejabberd">监控ejabberd</li>
+              <li><a href="/monitorapp/redis">监控redis</li>
+              <li><a href="/monitorapp/mysql">监控mysql</li>
+              <li><a href="/logout">猛点这里退出系统</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
   </body>
   
 </html>

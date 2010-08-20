@@ -64,7 +64,7 @@ login(Username, Password, VHost, Server, Port) ->
 
 send_string(Session, String) ->
     [DataXml] = exmpp_xml:parse_document(String),
-    ?PRINT("[session#~p] send xml#~s~n", [Session, String]),
+    ?DEBUG("[session#~p] send xml#~s~n", [Session, String]),
     exmpp_session:send_packet(Session, DataXml).
 
 
