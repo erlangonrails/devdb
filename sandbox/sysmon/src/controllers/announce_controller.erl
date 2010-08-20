@@ -1,4 +1,5 @@
 -module(announce_controller,[Env]).
+-include("erl_logger.hrl").
 
 -export([handle_request/2,before_filter/0]).
 
@@ -19,8 +20,12 @@ handle_request("service",[Type]) ->
 	        true ->
 	            {render,"announce/index.html",[{data, "announce"}, {result, "广播消息不能为空"}]};
 	        false ->
-                    send_announce_message(Type, MessageTitle, MessageLink, Message),
-	            {render,"announce/index.html",[{data, "announce"}, {result, "发送完成"}]}
+                    case send_announce_message(Type, MessageTitle, MessageLink, Message) of
+                        true ->
+                            {render,"announce/index.html",[{data, "announce"}, {result, "发送完成"}]};
+	                false ->
+                            {render,"announce/index.html",[{data, "announce"}, {result, "发送过程中发生错误, 请确保格式正确"}]}
+                    end
             end
     end.
 
@@ -63,14 +68,36 @@ check_usr_pwd(Usr, Pwd) ->
 send_announce_message("all", MessageTitle, MessageLink, Message) ->
     xmppclient_announce:login(),
     timer:sleep(1000*5),
-    xmppclient_announce:send_announce_all(MessageTitle, MessageLink, Message),
-    timer:sleep(1000*5),
-    xmppclient_announce:logout();
+    %% 处理格式错误导致的异常, 仍人需要保证announce正确logout:)
+    try xmppclient_announce:send_announce_all(MessageTitle, MessageLink, Message) of
+        _ ->
+            timer:sleep(1000*5),
+            xmppclient_announce:logout(),
+	    true
+    catch
+	TypeErr:TypeErrVal ->
+	    ?WARNING_MSG("send_announce_message exception: ~p, ~p, ~s, ~s, ~s", 
+                         [TypeErr, TypeErrVal, MessageTitle, MessageLink, Message]), 
+            timer:sleep(1000*5),
+	    xmppclient_announce:logout(),
+	    false
+    end;
 send_announce_message("online", MessageTitle, MessageLink, Message) ->
     xmppclient_announce:login(),
     timer:sleep(1000*5),
-    xmppclient_announce:send_announce_online(MessageTitle, MessageLink, Message),
-    timer:sleep(1000*5),
-    xmppclient_announce:logout();
+    %% 处理格式错误导致的异常, 仍人需要保证announce正确logout:)
+    try xmppclient_announce:send_announce_online(MessageTitle, MessageLink, Message) of
+        _ ->
+            timer:sleep(1000*5),
+            xmppclient_announce:logout(),
+	    true
+    catch
+	TypeErr:TypeErrVal ->
+	    ?WARNING_MSG("send_announce_message exception: ~p, ~p, ~s, ~s, ~s", 
+                         [TypeErr, TypeErrVal, MessageTitle, MessageLink, Message]), 
+            timer:sleep(1000*5),
+	    xmppclient_announce:logout(),
+	    false
+    end;
 send_announce_message(_, _MessageTitle, _MessageLink, _Message) ->
     ignore.
