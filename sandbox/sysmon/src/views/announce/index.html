@@ -19,8 +19,11 @@
         <div style="font-weight:bold;">发送消息给-><span style="color:green;">在线用户</span></div>
         <form action="/announce/service/online" method="post">
           announce用户名: <input type="text" name="announce_usr" value=""/><br/>
-          announce密码: <input type="text" name="announce_pwd" value=""/><br/>
+          announce密码: <input type="text" name="announce_pwd" value=""/><br/><br/>
           服务器的广播消息: <br/>
+          标题:<br/>
+          <textarea name="message_title" cols="50" rows="4" value=""></textarea><br/>
+          正文:<br/>
           <textarea name="message" cols="50" rows="4" value=""></textarea>
           <br/>
           <input type="submit" name="submit" value="发送"/>
@@ -30,8 +33,11 @@
         <div style="font-weight:bold;">发送消息给-><span style="color:red;">所有注册用户</span></div>
         <form action="/announce/service/all" method="post">
           announce用户名: <input type="text" name="announce_usr" value=""/><br/>
-          announce密码: <input type="text" name="announce_pwd" value=""/><br/>
+          announce密码: <input type="text" name="announce_pwd" value=""/><br/><br/>
           服务器的广播消息: <br/>
+          标题:<br/>
+          <textarea name="message_title" cols="50" rows="4" value=""></textarea><br/>
+          正文:<br/>
           <textarea name="message" cols="50" rows="4" value=""></textarea>
           <br/>
           <input type="submit" name="submit" value="发送"/>

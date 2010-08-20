@@ -14,17 +14,20 @@ URI:
 
 系统管理员发送下面消息:
 <message from='announceadmin@91guoguo.com' to='91guoguo.com/announce/all' xml:lang='*' type='chat' id='id1'>
+  <guoguo_system_title>这里是UTF8编码的系统消息标题</guoguo_system_title>
   <guoguo_system>这里是UTF8编码的系统消息</guoguo_system>
 </message>
 
 用户会收到:
 <message from='91guoguo.com' to='user1@91guoguo.com/call' xml:lang='*' type='chat' id='id1'>
+  <guoguo_system_title>这里是UTF8编码的系统消息标题</guoguo_system_title>
   <guoguo_system>这里是UTF8编码的系统消息</guoguo_system>
 </message>
 
 3. 配置:
 <1> 如果用未授权的用户发送announce-message消息, 会返回下面错误:
 <message from='91guoguo.com/announce/online' to='user1@91guoguo.com/call' xml:lang='*' type='chat' id='id1'>
+  <guoguo_system_title>这里是UTF8编码的系统消息标题</guoguo_system_title>
   <guoguo_system>这里是UTF8编码的系统消息</guoguo_system>
   <error code="403" type="auth">
     <forbidden xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"/>

@@ -7,6 +7,7 @@ handle_request("index",[]) ->
 handle_request("service",[Type]) ->
     Usr = erails_var:get_param("announce_usr", Env),
     Pwd = erails_var:get_param("announce_pwd", Env),
+    MessageTitle = erails_var:get_param("message_title", Env),
     Message = erails_var:get_param("message", Env),
   
     case check_usr_pwd(Usr, Pwd) of
@@ -17,7 +18,7 @@ handle_request("service",[Type]) ->
 	        true ->
 	            {render,"announce/index.html",[{data, "announce"}, {result, "广播消息不能为空"}]};
 	        false ->
-                    send_announce_message(Type, Message),
+                    send_announce_message(Type, MessageTitle, Message),
 	            {render,"announce/index.html",[{data, "announce"}, {result, "发送完成"}]}
             end
     end.
@@ -58,17 +59,17 @@ check_usr_pwd(Usr, Pwd) ->
 %% select * from spool where username = 'announce', 如果发现存在这样的消息, 需要手动删除,
 %% delete from spool where username = 'announce', 否则这个消息会在announce登录后发送给announce,
 %% 我们增加了休眠逻辑后, 会自动接收并处理掉这个消息.
-send_announce_message("all", Message) ->
+send_announce_message("all", MessageTitle, Message) ->
     xmppclient_announce:login(),
     timer:sleep(1000*5),
-    xmppclient_announce:send_announce_all(Message),
+    xmppclient_announce:send_announce_all(MessageTitle, Message),
     timer:sleep(1000*5),
     xmppclient_announce:logout();
-send_announce_message("online", Message) ->
+send_announce_message("online", MessageTitle, Message) ->
     xmppclient_announce:login(),
     timer:sleep(1000*5),
-    xmppclient_announce:send_announce_online(Message),
+    xmppclient_announce:send_announce_online(MessageTitle, Message),
     timer:sleep(1000*5),
     xmppclient_announce:logout();
-send_announce_message(_, _Message) ->
+send_announce_message(_, _MessageTitle, _Message) ->
     ignore.
