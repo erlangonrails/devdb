@@ -14,25 +14,25 @@
       </h1>
       <div id="content">
         <div style="color:red;">{{result}}</div>
-        <div>基于安全考虑, 我们需要提供系统授权的announce用户名 & 密码才能发送系统广播消息</div>
+        <div style="color:green;">基于安全考虑, 我们需要提供系统授权的announce用户名 & 密码才能发送系统广播消息</div>
         <br/>
-        <div>发送消息给在线用户</div>
+        <div style="font-weight:bold;">发送消息给-><span style="color:green;">在线用户</span></div>
         <form action="/announce/service/online" method="post">
           announce用户名: <input type="text" name="announce_usr" value=""/><br/>
           announce密码: <input type="text" name="announce_pwd" value=""/><br/>
           服务器的广播消息: <br/>
-          <textarea name="message" cols="30" rows="4" value=""></textarea>
+          <textarea name="message" cols="50" rows="4" value=""></textarea>
           <br/>
           <input type="submit" name="submit" value="发送"/>
         </form>
         <br/>
         <br/>
-        <div>发送消息给所有注册用户</div>
+        <div style="font-weight:bold;">发送消息给-><span style="color:red;">所有注册用户</span></div>
         <form action="/announce/service/all" method="post">
           announce用户名: <input type="text" name="announce_usr" value=""/><br/>
           announce密码: <input type="text" name="announce_pwd" value=""/><br/>
           服务器的广播消息: <br/>
-          <textarea name="message" cols="30" rows="4" value=""></textarea>
+          <textarea name="message" cols="50" rows="4" value=""></textarea>
           <br/>
           <input type="submit" name="submit" value="发送"/>
         </form>
