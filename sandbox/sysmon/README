@@ -33,3 +33,7 @@ c. 启动sysmon server
 
 3. 如何升级sysmon server?
 升级之前备份data目录下的文件, 然后安装新的sysmon server, 安装完成后, 使用备份的data目录替换新版server的data目录即可.
+
+
+存在的问题
+<1> 拷贝源代码到服务器端编译的时候, 可能会出错, 需要进入deps/exmpp-0.9.3, 重新运行 ./configure配置一下, 编译即可通过.
