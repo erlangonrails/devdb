@@ -47,8 +47,6 @@ case "$1" in
            $ERLANG_OPTS \
            -pa "$ROOT/ebin" -s dispatchserver start \
            -sasl sasl_error_logger \{file,\"$SASL_LOG_PATH\"\} 
-	 sleep 5
-	 $0 status
 	 ;;
   benchmark)
 	 $ERL -noinput $NAME dispatchserverbenchmark@$HOST \
