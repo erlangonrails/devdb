@@ -4,6 +4,8 @@
 # Configuration
 ###########################
 
+SETCOOKIE="setyourcookiehere"
+
 ERL=erl
 HOST=localhost
 
@@ -45,6 +47,7 @@ case "$1" in
   start)
 	 $ERL -noinput -detached $NAME $NODE \
            $ERLANG_OPTS \
+           -setcookie $SETCOOKIE \
            -pa "$ROOT/ebin" -s crontab start \
            -sasl sasl_error_logger \{file,\"$SASL_LOG_PATH\"\} 
 	 ;;
@@ -52,10 +55,12 @@ case "$1" in
          echo "Press any key to continue" 
          read foo 
          $ERL $NAME crontabdebug@$HOST -remsh $NODE \
+           -setcookie $SETCOOKIE \
            -pa "$ROOT/ebin"
          ;;
       *)
          $ERL -noinput $NAME crontabctl@$HOST \
+           -setcookie $SETCOOKIE \
            -pa "$ROOT/ebin" -s crontab_ctl -extra $NODE $@
          ;;
 esac
