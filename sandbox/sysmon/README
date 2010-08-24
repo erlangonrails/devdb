@@ -20,6 +20,8 @@ c. 修改erl-crontab的配置文件crontab.cfg, 增加任务:
 {{"0-59/5", "*", "*", "*", "*"}, {monitor_app_task, run, ['redis', 'memory']}}.
 {{"0-59/5", "*", "*", "*", "*"}, {monitor_app_task, run, ['mysql', 'cpu']}}.
 {{"0-59/5", "*", "*", "*", "*"}, {monitor_app_task, run, ['mysql', 'memory']}}.
+{{"0-59/5", "*", "*", "*", "*"}, {monitor_app_task, run, ['murmur', 'cpu']}}.
+{{"0-59/5", "*", "*", "*", "*"}, {monitor_app_task, run, ['murmur', 'memory']}}.
 
 d. 启动erl-crontab
 sudo ./bin/crontabctl start

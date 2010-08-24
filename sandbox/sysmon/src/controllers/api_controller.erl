@@ -5,7 +5,9 @@
 -include("../sysmon.hrl").
 
 -define(SRV_MONITOR_APP, "monitor_app").
--define(SERVICE_LIST, [?SRV_MONITOR_APP]). %% 定义获得许可的服务名称
+-define(SRV_CHECK_ALIVE, "check_alive").
+-define(SERVICE_LIST, [?SRV_MONITOR_APP,
+	               ?SRV_CHECK_ALIVE]). %% 定义获得许可的服务名称
 
 %%
 %% 该模块负责处理客户端的请求sysmon_client_api
@@ -58,8 +60,9 @@ get_post_body(_Key) ->
     end.
 
 handle_request_get(Service, Key) ->
-    %% TODO: 处理GET请求的逻辑, 返回结果给客户端
-    %% 当前版本不需要处理这部分逻辑
+    %% TODO: 
+    %% 处理GET请求的逻辑, 返回结果给客户端
+    %% (当前版本不需要处理这部分逻辑)
     ?DEBUG("request_get#Service: ~s, Key: ~s", [Service, Key]),
     {text, ?HTTP_OK}.
 
@@ -88,6 +91,12 @@ handle_request_post_in(?SRV_MONITOR_APP, _Key, #monitor_app{app = _App,
 							   value = _Value} = Term) ->
     LogFile = monitor_app_task_util:gen_filename(Term),
     sysmon_util:log_data(LogFile, "~p.~n", [Term]),
+    {text, ?HTTP_OK};
+handle_request_post_in(?SRV_CHECK_ALIVE, _Key, #check_alive{app = _App, 
+							   host = _Host,
+							   time = _Time,
+							   value = _Value} = Term) ->
+    %% TODO: 处理数据的逻辑
     {text, ?HTTP_OK};
 handle_request_post_in(_Service, _Key, _Term) ->
     {text, "handle_request_post_in error!!!"}.
